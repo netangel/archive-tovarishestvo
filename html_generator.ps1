@@ -3,8 +3,8 @@ $PSDefaultParameterValues['*:Encoding'] = 'utf8'
 $startTime = Get-Date
 Write-Output "Html processing started at "$startTime
 
-
-$destinationSiteRootFolder = '\\pomor_schooner\drawings\public\archive'
+$settingsObject = Get-Content -Path .\settings.json | ConvertFrom-Json
+$destinationSiteRootFolder = $settingsObject.rootSiteFolder
 $tagsRootFolderName = 'Tags'
 $thumbnailsFolderName = 'Thumbnails'
 $itemsInRow = 3
@@ -21,7 +21,7 @@ function TruncateName
     return $Value
 }
 
-$mainPageHtmlFile = $destinationSiteRootFolder + "\main.html"
+$mainPageHtmlFile = $destinationSiteRootFolder + "\index.html"
 
 $mainPageHtemlHeader = @"
 <!DOCTYPE html>

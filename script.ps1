@@ -3,13 +3,14 @@ $PSDefaultParameterValues['*:Encoding'] = 'utf8'
 $startTime = Get-Date
 Write-Output "Processing started at "$startTime
 
-$inputFolderName = $args[0]
-$outputFolderName = "..\output"
+$settingsObject = Get-Content -Path .\settings.json | ConvertFrom-Json
 
-$destinationSiteRootFolder = '\\pomor_schooner\drawings\public\archive'
+$inputFolderName = $args[0]
+$outputFolderName = $settingsObject.tempOutputFolder
+
+$destinationSiteRootFolder = $settingsObject.rootSiteFolder + "\" + $settingsObject.archiveSiteFolder
 $tagsRootFolderName = 'Tags'
 
-$PSDefaultParameterValues['*:Encoding'] = 'utf8'
 $tool= 'C:\\Program Files\\gs\\gs9.55.0\\bin\\gswin64c.exe'
 $magick = '.\imagemagick\magick.exe'
 $thumbnailsFolderName = 'Thumbnails'
