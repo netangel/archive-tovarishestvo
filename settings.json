@@ -1,4 +1,9 @@
 {
 	"rootSiteFolder": "\\pomor_schooner\drawings\public",
-	"archiveSiteFolder": "archive"
+	"archiveSiteFolder": "archive",
+	"tempOutputFolder": "..\..\output"
+	"foldersToProcess": [
+		"C:\work\shipyard_archive\test_data",
+		"C:\work\shipyard_archive\test_data_2"
+	]
 }
