@@ -5,10 +5,14 @@ Write-Output "Html processing started at "$startTime
 
 $settingsObject = Get-Content -Path .\settings.json | ConvertFrom-Json
 $destinationSiteRootFolder = $settingsObject.rootSiteFolder
+$archiveRootFolder = $destinationSiteRootFolder + "/" + $settingsObject.archiveSiteFolder
 $tagsRootFolderName = 'Tags'
 $thumbnailsFolderName = 'Thumbnails'
 $itemsInRow = 3
 $maxDrawNameLength = 60
+$indexPageHtmlTemplate = Get-Content -Path .\index_page_template.html -Raw
+$folderPageHtmlTemplate = Get-Content -Path .\folder_page_template.html -Raw
+$tagPageHtmlTemplate = Get-Content -Path .\tag_page_template.html -Raw
 
 function TruncateName
 {
@@ -21,173 +25,102 @@ function TruncateName
     return $Value
 }
 
-$mainPageHtmlFile = $destinationSiteRootFolder + "\index.html"
-
-$mainPageHtemlHeader = @"
-<!DOCTYPE html>
-<html lang='ru'>
-<head>
-    <meta charset='utf-8'/>
-    <title>Папка {0}</title>
-</head>
-<body>
-<h1>Чертежи из архива Соломбальской судоверфи</h1>
-<p>Проект "Цифровой архив Соломбальской судоверфи" реализуется Товариществом поморского судостроения совместно САФУ при поддержке Фонда президентских грантов.<br/>
-Твердые копии материалов предоставлены для сканирования С.Н. Николаевым<br/>
-Сканирование ведется при поддержки компании <a href='https://iq-tech.ru/'>IQTech</a>
-</p>
-<h2>По папкам</h2>
-<div>
-"@
-
-Set-Content -Path $mainPageHtmlFile -Value $mainPageHtemlHeader -Force
+$indexPageHtmlFile = $destinationSiteRootFolder + "\index.html"
+$indexPageFoldersPart = ""
+$indexPageTagsPart = ""
+$totalFilesCount = 0
 
 # process all folders except 'Tags'
-Get-ChildItem -Path $destinationSiteRootFolder\* -Directory -Recurse -Exclude Tags,Thumbnails
-Get-ChildItem -Path $destinationSiteRootFolder\* -Directory -Recurse -Exclude Tags,Thumbnails |
+
+Write-Output "processing folder "$archiveRootFolder
+
+Get-ChildItem -Path $archiveRootFolder/* -Directory -Recurse -Exclude Tags,Thumbnails |
 Foreach-Object {
     Write-Output "processing folder "$_.Name
     $directoryInfoFile = $_.FullName + "\" + $_.Name + ".txt"
-    $siteFolderHtmlFile = $_.FullName + "\" + $_.Name + ".html"
+    $siteFolderHtmlFile = $archiveRootFolder + "\" + $_.Name + ".html"
     
+    $folderPageContent = ""
     $lineNumber = 0
     $folderRussianName = $_.Name
     foreach ($line in Get-Content $directoryInfoFile) {
         if($lineNumber -eq 0) {
             $folderRussianName = $line
-            $outputHtmlHead = [string]::Format(
-@"
-            <!DOCTYPE html>
-            <html lang='ru'>
-            <head>
-                <meta charset='utf-8'/>
-                <title>Папка {0}</title>
-            </head>
-            <body>
-            <h1>Чертежи из папки {0}</h1>
-            <table>
-            <tr>
-"@, $folderRussianName)
-            Set-Content -Path $siteFolderHtmlFile -Value $outputHtmlHead -Force
         }
         else {
             $splittedInfo = $line.Split("{|}")
             if (($lineNumber - 1) -gt 0 -and ($lineNumber - 1) % $itemsInRow -eq 0)
             {
-                Add-Content -Path $siteFolderHtmlFile -Value @"
+                $folderPageContent += @"
 </tr>
 <tr>
 "@
             }
             $truncatedName = TruncateName -Value $splittedInfo[1]
-            $itemTd = [string]::Format(@"
+            $folderPageContent += [string]::Format(@"
 		<td>
-			<a href="{0}.png"><img src="Thumbnails\{0}.png" alt="{1}"/><br/>{1}</a><br/>
-            <a href="{0}.tif">Скачать в формате tif</a>
+			<a href="{2}\{0}.png"><img src="{2}\Thumbnails\{0}.png" alt="{1}"/><br/>{1}</a><br/>
+            <a href="{2}\{0}.tif">Скачать в формате tif</a>
 		</td>
-"@, $splittedInfo[0], $truncatedName)
-            Add-Content -Path $siteFolderHtmlFile -Value $itemTd
+"@, $splittedInfo[0], $truncatedName, $_.Name)
+            $totalFilesCount++
         }
 
         $lineNumber++
     }
 
-    Add-Content -Path $siteFolderHtmlFile -Value @"
-</tr>
-</table>
-<br/>
-<h3>Благодарности</h3>
-<p>Проект "Цифровой архив Соломбальской судоверфи" реализуется Товариществом поморского судостроения совместно САФУ при поддержке Фонда президентских грантов.<br/>
-Твердые копии материалов предоставлены для сканирования С.Н. Николаевым<br/>
-Сканирование ведется при поддержки компании <a href='https://iq-tech.ru/'>IQTech</a>
-</p>
-<h3>Лицензия</h3>
-<a rel='license' href='http://creativecommons.org/licenses/by-nc-sa/4.0/'><img alt='Лицензия Creative Commons' style='border-width:0' src='https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png' /></a><br />Это произведение доступно по <a rel='license' href='http://creativecommons.org/licenses/by-nc-sa/4.0/'>лицензии Creative Commons «Attribution-NonCommercial-ShareAlike» («Атрибуция-Некоммерчески-СохранениеУсловий») 4.0 Всемирная</a>.
-<p>Эта лицензия означает, что вы можете свободно использовать чертежи, представленные на этом сайте, перерабатывать их, исправлять и развивать и создавать производные произведения на некоммерческой основе, с условием упоминания оригинального авторства и лицензирования производных работ на аналогичных лицензионных условиях.</p>
-</body>
-"@
+    $folderPage = [string]::Format($folderPageHtmlTemplate, $folderRussianName, $folderPageContent)
+    Set-Content -Path $siteFolderHtmlFile -Value $folderPage -Force
 
-    $folderLinkTemplate = [string]::Format(@"
-    <a href="{0}\{0}.html">{1}</a> ({2})<br/>
-"@, $_.Name, $folderRussianName, ($lineNumber - 1))
-    Add-Content -Path $mainPageHtmlFile $folderLinkTemplate
+    $indexPageFoldersPart += [string]::Format(@"
+    <a href="{3}\{0}.html">{1}</a> ({2})<br/>
+"@, $_.Name, $folderRussianName, ($lineNumber - 1), $settingsObject.archiveSiteFolder)
 }
 
 
-Add-Content -Path $mainPageHtmlFile -Value @"
-</div>
-<div>
-<h2>По категориям</h2>
-"@
-
 # process tags
-Get-ChildItem -Path $destinationSiteRootFolder\$tagsRootFolderName\*.txt |
+Get-ChildItem -Path $archiveRootFolder/$tagsRootFolderName/*.txt |
 Foreach-Object {
     $tagHtmlFile = $_.FullName.Replace(".txt", ".html")
     $lineNumber = 0
-    $folderRussianName = $_.Name
+    $tagRussianName = $_.Name
+    $tagPageContent = ""
+
     foreach ($line in Get-Content $_.FullName) {
         if($lineNumber -eq 0) {
             $tagRussianName = $line
-            $outputHtmlHead = [string]::Format(
-@"
-            <!DOCTYPE html>
-            <html lang='ru'>
-            <head>
-                <meta charset='utf-8'/>
-                <title>Категория '{0}'</title>
-            </head>
-            <body>
-            <h1>Чертежи в категории '{0}'</h1>
-            <table>
-            <tr>
-"@, $tagRussianName)
-            Set-Content -Path $tagHtmlFile -Value $outputHtmlHead -Force
         }
         else {
             $splittedInfo = $line.Split("{|}")
             if (($lineNumber - 1) -gt 0 -and ($lineNumber - 1) % $itemsInRow -eq 0)
             {
-                Add-Content -Path $tagHtmlFile -Value @"
+                $tagPageContent += @"
 </tr>
 <tr>
 "@
             }
             $truncatedName = TruncateName -Value $splittedInfo[2]
-            $itemTd = [string]::Format(@"
+            $tagPageContent += [string]::Format(@"
 		<td>
 			<a href="..\{0}\{1}.png"><img src="..\{0}\Thumbnails\{1}.png" alt="{2}"/><br/>{2}</a><br/>
             <a href="..\{0}\{1}.tif">Скачать в формате tif</a>
 		</td>
 "@, $splittedInfo[0], $splittedInfo[1], $truncatedName)
-            Add-Content -Path $tagHtmlFile -Value $itemTd
         }
 
         $lineNumber++
     }
 
-    Add-Content -Path $tagHtmlFile -Value @"
-</tr>
-</table>
-<br/>
-<h3>Благодарности</h3>
-<p>Проект "Цифровой архив Соломбальской судоверфи" реализуется Товариществом поморского судостроения совместно САФУ при поддержке Фонда президентских грантов.<br/>
-Твердые копии материалов предоставлены для сканирования С.Н. Николаевым<br/>
-Сканирование ведется при поддержки компании <a href='https://iq-tech.ru/'>IQTech</a>
-</p>
-<h3>Лицензия</h3>
-<a rel='license' href='http://creativecommons.org/licenses/by-nc-sa/4.0/'><img alt='Лицензия Creative Commons' style='border-width:0' src='https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png' /></a><br />Это произведение доступно по <a rel='license' href='http://creativecommons.org/licenses/by-nc-sa/4.0/'>лицензии Creative Commons «Attribution-NonCommercial-ShareAlike» («Атрибуция-Некоммерчески-СохранениеУсловий») 4.0 Всемирная</a>.
-<p>Эта лицензия означает, что вы можете свободно использовать чертежи, представленные на этом сайте, перерабатывать их, исправлять и развивать и создавать производные произведения на некоммерческой основе, с условием упоминания оригинального авторства и лицензирования производных работ на аналогичных лицензионных условиях.</p>
-</body>
-"@
+    $tagPage = [string]::Format($tagPageHtmlTemplate, $tagRussianName, $tagPageContent)
+    Set-Content -Path $tagHtmlFile -Value $tagPage -Force
 
-    $tagLinkTemplate = [string]::Format(@"
-    <a href="Tags\{0}.html">{1}</a> ({2})<br/>
-"@, $_.BaseName, $tagRussianName, ($lineNumber - 1))
-    Add-Content -Path $mainPageHtmlFile $tagLinkTemplate
+    $indexPageTagsPart += [string]::Format(@"
+    <a href="{3}\Tags\{0}.html">{1}</a> ({2})<br/>
+"@, $_.BaseName, $tagRussianName, ($lineNumber - 1), $settingsObject.archiveSiteFolder)
 }
 
-Add-Content -Path $mainPageHtmlFile -Value "<br/><h3>Лицензия</h3><a rel='license' href='http://creativecommons.org/licenses/by-nc-sa/4.0/'><img alt='Лицензия Creative Commons' style='border-width:0' src='https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png' /></a><br />Это произведение доступно по <a rel='license' href='http://creativecommons.org/licenses/by-nc-sa/4.0/'>лицензии Creative Commons «Attribution-NonCommercial-ShareAlike» («Атрибуция-Некоммерчески-СохранениеУсловий») 4.0 Всемирная</a>.<p>Эта лицензия означает, что вы можете свободно использовать чертежи, представленные на этом сайте, перерабатывать их, исправлять и развивать и создавать производные произведения на некоммерческой основе, с условием упоминания оригинального авторства и лицензирования производных работ на аналогичных лицензионных условиях.</p></div>"
+$indexPage = [string]::Format($indexPageHtmlTemplate, $totalFilesCount, $indexPageFoldersPart, $indexPageTagsPart)
+Set-Content -Path $indexPageHtmlFile -Value $indexPage -Force
 
 $endTime = Get-Date
 Write-Output "Html processing finished at "$endTime

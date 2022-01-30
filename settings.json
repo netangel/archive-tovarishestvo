@@ -1,9 +1,9 @@
 {
-	"rootSiteFolder": "\\pomor_schooner\drawings\public",
+	"rootSiteFolder": "C:/work/shipyard_archive/archive_site",
 	"archiveSiteFolder": "archive",
-	"tempOutputFolder": "..\..\output"
+	"tempOutputFolder": "../../output",
 	"foldersToProcess": [
-		"C:\work\shipyard_archive\test_data",
-		"C:\work\shipyard_archive\test_data_2"
+		"C:/work/shipyard_archive/test_data",
+		"C:/work/shipyard_archive/test_data_2"
 	]
 }
