@@ -49,19 +49,14 @@ Foreach-Object {
         }
         else {
             $splittedInfo = $line.Split("{|}")
-            if (($lineNumber - 1) -gt 0 -and ($lineNumber - 1) % $itemsInRow -eq 0)
-            {
-                $folderPageContent += @"
-</tr>
-<tr>
-"@
-            }
             $truncatedName = TruncateName -Value $splittedInfo[1]
             $folderPageContent += [string]::Format(@"
-		<td>
+		<div style="display: flex; max-width: 550px; align-items: flex-end;">
+            <div style="text-align: center; width: 100%;">
 			<a href="{2}\{0}.png"><img src="{2}\Thumbnails\{0}.png" alt="{1}"/><br/>{1}</a><br/>
             <a href="{2}\{0}.tif">Скачать в формате tif</a>
-		</td>
+            </div>
+		</div>
 "@, $splittedInfo[0], $truncatedName, $_.Name)
             $totalFilesCount++
         }
@@ -92,19 +87,14 @@ Foreach-Object {
         }
         else {
             $splittedInfo = $line.Split("{|}")
-            if (($lineNumber - 1) -gt 0 -and ($lineNumber - 1) % $itemsInRow -eq 0)
-            {
-                $tagPageContent += @"
-</tr>
-<tr>
-"@
-            }
             $truncatedName = TruncateName -Value $splittedInfo[2]
             $tagPageContent += [string]::Format(@"
-		<td>
+		<div style="display: flex; max-width: 550px; align-items: flex-end;">
+            <div style="text-align: center; width: 100%;">
 			<a href="..\{0}\{1}.png"><img src="..\{0}\Thumbnails\{1}.png" alt="{2}"/><br/>{2}</a><br/>
             <a href="..\{0}\{1}.tif">Скачать в формате tif</a>
-		</td>
+            </div>
+		</div>
 "@, $splittedInfo[0], $splittedInfo[1], $truncatedName)
         }
 
