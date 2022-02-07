@@ -74,7 +74,7 @@ Foreach-Object {
 
 
 # process tags
-Get-ChildItem -Path $archiveRootFolder/$tagsRootFolderName/*.txt |
+Get-ChildItem -Path $archiveRootFolder/$tagsRootFolderName/*.txt | Sort Name |
 Foreach-Object {
     $tagHtmlFile = $_.FullName.Replace(".txt", ".html")
     $lineNumber = 0
