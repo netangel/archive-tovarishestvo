@@ -1,5 +1,5 @@
 {
-	"rootSiteFolder": "C:/work/shipyard_archive/archive_site",
+	"RootSiteFolder": "C:/Users/akriv/OneDrive/Documents/Tovarishestvo/validation",
 	"archiveSiteFolder": "archive",
 	"tempOutputFolder": "../../output",
 	"foldersToProcess": [
