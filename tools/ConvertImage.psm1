@@ -15,9 +15,8 @@ function Convert-PdfToTiff {
     )
 
     process {
-        $OutputParam = "-sOutputFile=" + $OutputTiffFileName
         $InputFileName = $InputPdfFile.FullName
-        & $GhostScriptTool -dNOPAUSE -sDEVICE=tiffgray $OutputParam -q -r300 $InputFileName -c quit
+        & $GhostScriptTool -dNOPAUSE -sDEVICE=tiffgray ("-sOutputFile=" + $OutputTiffFileName) -q -r300 $InputFileName -c quit
 
         $OutputTiffFile = Get-Item $OutputTiffFileName
 
