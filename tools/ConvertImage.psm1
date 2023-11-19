@@ -1,7 +1,32 @@
 ﻿$GhostScriptTool= '..\..\tools\ghostscript\bin\gswin64c.exe'
-$ImageMagicTool = '..\..\tools\imagemagic\magick.exe'
+$ImageMagickTool = '..\..\tools\imagemagic\magick.exe'
 
-Write-Output $GhostScriptTool
+function Get-PDFConvereter {
+    if (Get-Item -Path $GhostScriptTool) {
+        return $GhostScriptTool
+    }
+    elseif (Get-Command "gsc" -ErrorAction SilentlyContinue) {
+        Write-Output "No tool gswin64.exe"
+        return "gsc"
+    }
+    else {
+        throw "Не могу найти конвертор PDF -> TIFF"
+    }
+}
+
+function Get-ImageMagickTool {
+    if (Get-Item -Path $ImageMagickTool) {
+        return $ImageMagickTool
+    }
+    elseif (Get-Command "magick" -ErrorAction SilentlyContinue) {
+        Write-Output "No tools magic.exe" 
+        return "magick"
+    }
+    else {
+        throw "Не могу найти конвертор картинок"
+    }
+
+}
 
 function Convert-PdfToTiff {
     Param(
@@ -16,7 +41,7 @@ function Convert-PdfToTiff {
 
     process {
         $InputFileName = $InputPdfFile.FullName
-        & $GhostScriptTool -dNOPAUSE -sDEVICE=tiffgray ("-sOutputFile=" + $OutputTiffFileName) -q -r300 $InputFileName -c quit
+        & Get-PDFConvereter -dNOPAUSE -sDEVICE=tiffgray ("-sOutputFile=" + $OutputTiffFileName) -q -r300 $InputFileName -c quit
 
         $OutputTiffFile = Get-Item $OutputTiffFileName
 
@@ -43,7 +68,7 @@ function Optimize-Tiff {
         [string] $OutputTiffFileName
     )
 
-    & $ImageMagicTool convert $InputTiffFile.FullName -colorspace Gray -quality 100 -resize 50% $OutputTiffFileName
+    & Get-ImageMagickTool convert $InputTiffFile.FullName -colorspace Gray -quality 100 -resize 50% $OutputTiffFileName
 }
 
 Export-ModuleMember -Function Convert-PdfToTiff
