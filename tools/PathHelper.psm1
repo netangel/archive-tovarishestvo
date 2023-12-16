@@ -1,6 +1,6 @@
 $PathSeparator = $IsWindows ? "\" : "/" 
 
-Get-FullPathString([string] $FirstPart, [string] $SecondPart)
+function Get-FullPathString([string] $FirstPart, [string] $SecondPart)
 {
     if (-Not ($FirstPart -match "\w$PathSeparator$")) {
         $FirstPart += $PathSeparator

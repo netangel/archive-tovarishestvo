@@ -14,6 +14,32 @@ Param(
 Import-Module ./tools/ConvertText.psm1
 Import-Module ./tools/PathHelper.psm1
 
+function Get-DirectoryOrCreate([string] $DirName)  {
+    $TranslitName = ConvertTo-Translit $DirName
+
+    if (-Not (Test-Path (Get-FullPathString $ResultPath $TranslitName))) {
+        New-Item -Path $ResultPath -ItemType Directory -Name $TranslitName | Out-Null
+    }
+
+    return $TranslitName
+}
+
+function Read-DirectoryToJson([string] $DirName) {
+    $JsonIndexFile = Get-FullPathString (Get-FullPathString $ResultPath $DirName) ($DirName + ".json")
+    
+    if ((Test-Path $JsonIndexFile) -and (Test-Json -Path $JsonIndexFile)) {
+        return Get-Content -Path $JsonIndexFile ConvertFrom-Json
+    }
+    
+    [PSCustomObject]@{
+        directory       = $DirName
+        original_name   = $null
+        description     = $null
+        files           = @()
+    }
+}
+
+
 # Проверим, если папки существуют
 if (-Not (Test-Path $SourcePath)) {
     throw "Папка с оригиналами ($SourcePath) не найдена!"
@@ -32,39 +58,10 @@ foreach ($SourceDirName in Get-ChildItem $SourcePath | Select-Object -ExpandProp
     $ResultDirIndex = Read-DirectoryToJson $ResultDir
 
     if ($null -eq $ResultDirIndex.original_name) {
-        $ResultDirIndex.original_name = ConvertTo-Translit $SourceDirName
+        $ResultDirIndex.original_name = $SourceDirName
     }
-
-
 
     $JsonIndexFile = Get-FullPathString (Get-FullPathString $ResultPath $ResultDir) ($ResultDir + ".json")
     $ResultDirIndex | ConvertTo-Json -depth 1 | Set-Content -Path $JsonIndexFile
-}
-
-
-function Get-DirectoryOrCreate([string] $DirName)  {
-    $TranslitName = ConvertTo-Translit $DirName
-    $TranslitNameWithPath = Get-FullPathString $ResultPath $TranslitName 
-
-    if (-Not (Test-Path $TranslitNameWithPath)) {
-        New-Item $TranslitNameWithPath
-    }
-
-    $TranslitName
-}
-
-function Read-DirectoryToJson([string] $DirName) {
-    $JsonIndexFile = Get-FullPathString (Get-FullPathString $ResultPath $DirName) ($DirName + ".json")
-    
-    if (Test-Path $JsonIndexFile && Test-Json -Path $JsonIndexFile) {
-        return Get-Content -Path $JsonIndexFile ConvertFrom-Json
-    }
-    
-    [PSCustomObject]@{
-        directory       = $DirName
-        original_name   = ''
-        description     = ''
-        files           = @()
-    }
 }
 
