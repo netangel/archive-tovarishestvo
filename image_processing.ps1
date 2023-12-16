@@ -14,21 +14,11 @@ Param(
 Import-Module ./tools/ConvertText.psm1
 Import-Module ./tools/PathHelper.psm1
 
-function Get-DirectoryOrCreate([string] $DirName)  {
-    $TranslitName = ConvertTo-Translit $DirName
-
-    if (-Not (Test-Path (Get-FullPathString $ResultPath $TranslitName))) {
-        New-Item -Path $ResultPath -ItemType Directory -Name $TranslitName | Out-Null
-    }
-
-    return $TranslitName
-}
-
 function Read-DirectoryToJson([string] $DirName) {
     $JsonIndexFile = Get-FullPathString (Get-FullPathString $ResultPath $DirName) ($DirName + ".json")
     
     if ((Test-Path $JsonIndexFile) -and (Test-Json -Path $JsonIndexFile)) {
-        return Get-Content -Path $JsonIndexFile ConvertFrom-Json
+        return Get-Content -Path $JsonIndexFile | ConvertFrom-Json
     }
     
     [PSCustomObject]@{
@@ -38,7 +28,6 @@ function Read-DirectoryToJson([string] $DirName) {
         files           = @()
     }
 }
-
 
 # Проверим, если папки существуют
 if (-Not (Test-Path $SourcePath)) {
