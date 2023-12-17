@@ -1,3 +1,5 @@
+Install-Module .\tools\convert_to_latin.psm1
+
 $PSDefaultParameterValues['*:Encoding'] = 'utf8'
 
 $startTime = Get-Date
@@ -18,39 +20,39 @@ $thumbnailDimension = 400
 $itemsInRow = 3
 
 $capitalLetters = @(
-    [char]'À'
-    [char]'Á'
-    [char]'Â'
-    [char]'Ã'
-    [char]'Ä'
-    [char]'Å'
-    [char]'¨'
-    [char]'Æ'
-    [char]'Ç'
-    [char]'È'
-    [char]'É'
-    [char]'Ê'
-    [char]'Ë'
-    [char]'Ì'
-    [char]'Í'
-    [char]'Î'
-    [char]'Ï'
-    [char]'Ğ'
-    [char]'Ñ'
-    [char]'Ò'
-    [char]'Ó'
-    [char]'Ô'
-    [char]'Õ'
-    [char]'Ö'
-    [char]'×'
-    [char]'Ø'
-    [char]'Ù'
-    [char]'Ú'
-    [char]'Û'
-    [char]'Ü'
-    [char]'İ'
-    [char]'Ş'
-    [char]'ß'
+    [char]'Ã€'
+    [char]'Ã'
+    [char]'Ã‚'
+    [char]'Ãƒ'
+    [char]'Ã„'
+    [char]'Ã…'
+    [char]'Â¨'
+    [char]'Ã†'
+    [char]'Ã‡'
+    [char]'Ãˆ'
+    [char]'Ã‰'
+    [char]'ÃŠ'
+    [char]'Ã‹'
+    [char]'ÃŒ'
+    [char]'Ã'
+    [char]'Ã'
+    [char]'Ã'
+    [char]'Ã'
+    [char]'Ã‘'
+    [char]'Ã’'
+    [char]'Ã“'
+    [char]'Ã”'
+    [char]'Ã•'
+    [char]'Ã–'
+    [char]'Ã—'
+    [char]'Ã˜'
+    [char]'Ã™'
+    [char]'Ãš'
+    [char]'Ã›'
+    [char]'Ãœ'
+    [char]'Ã'
+    [char]'Ã'
+    [char]'ÃŸ'
 )
 
 $digits = @(
@@ -66,97 +68,6 @@ $digits = @(
     [char]'9'
 )
 
-function ConvertToTranslit
-{
-    param ($Value)
-
-    $Translit = @{
-
-    [char]'à' = "a"
-    [char]'À' = "A"
-    [char]'á' = "b"
-    [char]'Á' = "B"
-    [char]'â' = "v"
-    [char]'Â' = "V"
-    [char]'ã' = "g"
-    [char]'Ã' = "G"
-    [char]'ä' = "d"
-    [char]'Ä' = "D"
-    [char]'å' = "e"
-    [char]'Å' = "E"
-    [char]'¸' = "e"
-    [char]'¨' = "E"
-    [char]'æ' = "zh"
-    [char]'Æ' = "Zh"
-    [char]'ç' = "z"
-    [char]'Ç' = "Z"
-    [char]'è' = "i"
-    [char]'È' = "I"
-    [char]'é' = "y"
-    [char]'É' = "Y"
-    [char]'ê' = "k"
-    [char]'Ê' = "K"
-    [char]'ë' = "l"
-    [char]'Ë' = "L"
-    [char]'ì' = "m"
-    [char]'Ì' = "M"
-    [char]'í' = "n"
-    [char]'Í' = "N"
-    [char]'î' = "o"
-    [char]'Î' = "O"
-    [char]'ï' = "p"
-    [char]'Ï' = "P"
-    [char]'ğ' = "r"
-    [char]'Ğ' = "R"
-    [char]'ñ' = "s"
-    [char]'Ñ' = "S"
-    [char]'ò' = "t"
-    [char]'Ò' = "T"
-    [char]'ó' = "u"
-    [char]'Ó' = "U"
-    [char]'ô' = "f"
-    [char]'Ô' = "F"
-    [char]'õ' = "kh"
-    [char]'Õ' = "Kh"
-    [char]'ö' = "ts"
-    [char]'Ö' = "Ts"
-    [char]'÷' = "ch"
-    [char]'×' = "Ch"
-    [char]'ø' = "sh"
-    [char]'Ø' = "Sh"
-    [char]'ù' = "sch"
-    [char]'Ù' = "Sch"
-    [char]'ú' = ""
-    [char]'Ú' = ""
-    [char]'û' = "y"
-    [char]'Û' = "Y"
-    [char]'ü' = ""
-    [char]'Ü' = ""
-    [char]'ı' = "e"
-    [char]'İ' = "E"
-    [char]'ş' = "yu"
-    [char]'Ş' = "Yu"
-    [char]'ÿ' = "ya"
-    [char]'ß' = "Ya"
-    [char]' ' = ""
-    [char]'¹' = "N"
-    [char]',' = "_"
-    [char]'.' = "_"
-    }
-
-    $result = ''
-    foreach ($c in $inChars = $Value.ToCharArray())
-    {
-        if ($Translit[$c] -cne $Null ) {
-            $result += $Translit[$c]
-        }
-        else {
-            $result += $c
-        }
-    }
-
-    return $result
-}
 
 $folderName = Get-ItemPropertyValue -Path $inputFolderName -Name Name
 $translitFolderName = ConvertToTranslit -Value $folderName
