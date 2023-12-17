@@ -23,11 +23,16 @@ function Read-DirectoryToJson([string] $DirName) {
     }
     
     [PSCustomObject]@{
-        directory       = $DirName
-        original_name   = $null
-        description     = $null
-        files           = @{}
+        Directory       = $DirName
+        OriginalName    = $null
+        Description     = $null
+        Files           = [PSCustomObject]@{}
     }
+}
+
+function Get-Thumbnails([string] $FileName)
+{
+    return @()
 }
 
 # Проверим, если папки существуют
@@ -48,34 +53,45 @@ foreach ($SourceDirName in Get-ChildItem $SourcePath -Name) {
     $ResultDirIndex = Read-DirectoryToJson $ResultDir
 
     if ($null -eq $ResultDirIndex.original_name) {
-        $ResultDirIndex.original_name = $SourceDirName
+        $ResultDirIndex.OriginalName = $SourceDirName
     }
 
-    # обработаем отсканированные исходники в текущей папке
     $SourceDirFullPath = Get-FullPathString $SourcePath $SourceDirName
     $ResultDirFullPath = Get-FullPathString $ResultPath $ResultDir
+
+    # обработаем отсканированные исходники в текущей папке
     Get-ChildItem $SourceDirFullPath | ForEach-Object -Process {
         # полный путь к скану
         $SourceFileFullPath = Get-FullPathString $SourceDirFullPath $_.Name
 
         # полный путь
-        $OutputFileName = Get-FullPathString $ResultDirFullPath ( ConvertTo-Translit $_.Name )
+        $OutputFileName = ( Get-FullPathString $ResultDirFullPath ( ConvertTo-Translit $_.BaseName )) + ".tiff"
 
         # контрольная сумма скана
-        $MD5sum = Get-FileHash $SourceFileFullPath
+        $MD5sum = (Get-FileHash $SourceFileFullPath MD5).Hash
 
         # если файла нет в индексе, то обработаем его
-        if ($null -eq $ResultDirIndex.files[$MD5sum.Hash]) {
-            switch ($_.Extension) {
-                ".pdf"  { Convert-PdfToTiff -InputPdfFile  $_ -OutputTiffFileName $OutputFileName }
-                ".tiff" { Optimize-Tiff     -InputTiffFile $_ -OutputTiffFileName $OutputFileName } 
-                Default { <# do nothing #> }
-            }
-        }
+        if ($null -eq $ResultDirIndex.Files.$MD5sum) {
+        
+            # switch ($_.Extension) {
+            #     ".pdf"  { Convert-PdfToTiff -InputPdfFile  $_ -OutputTiffFileName $OutputFileName }
+            #     ".tiff" { Optimize-Tiff     -InputTiffFile $_ -OutputTiffFileName $OutputFileName } 
+            #     Default { <# do nothing #> }
+            # }
 
+            $NewFileData = [PSCustomObject]@{
+                ResultFileName  = ( ConvertTo-Translit $_.BaseName ) + ".tiff"
+                OriginalName    = $_.Name
+                Tags            = Get-TagsFromName $_.BaseName
+                Year            = 0
+                Description     = $null
+                Thumbnails      = Get-Thumbnails $OutputFileName
+            }
+
+            $ResultDirIndex.Files | Add-Member -MemberType NoteProperty -Name $MD5sum -Value $NewFileData
+        }
     }
 
     $JsonIndexFile = Get-FullPathString (Get-FullPathString $ResultPath $ResultDir) ($ResultDir + ".json")
-    $ResultDirIndex | ConvertTo-Json -depth 1 | Set-Content -Path $JsonIndexFile
+    $ResultDirIndex | ConvertTo-Json -depth 10 | Set-Content -Path $JsonIndexFile
 }
-

@@ -19,4 +19,14 @@ function Get-DirectoryOrCreate([string] $DirName)  {
     return $TranslitName
 }
 
-Export-ModuleMember -Function Get-FullPathString, Get-DirectoryOrCreate
+function Get-TagsFromName([string] $FileName)
+{
+    ( $FileName -split "[_-]" ) -match "^[^\s\d]+$"
+}
+
+function Get-YearFromFilename([string] $FileName)
+{
+
+}
+
+Export-ModuleMember -Function Get-FullPathString, Get-DirectoryOrCreate, Get-TagsFromName

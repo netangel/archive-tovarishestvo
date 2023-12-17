@@ -28,6 +28,8 @@ function Get-ImageMagickTool {
 
 }
 
+
+
 function Convert-PdfToTiff {
     Param(
         # Input file object
