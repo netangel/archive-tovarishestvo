@@ -19,4 +19,4 @@ function Get-DirectoryOrCreate([string] $DirName)  {
     return $TranslitName
 }
 
-Export-ModuleMember -Function Get-FullPathString
+Export-ModuleMember -Function Get-FullPathString, Get-DirectoryOrCreate

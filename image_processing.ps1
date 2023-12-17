@@ -13,6 +13,7 @@ Param(
 
 Import-Module ./tools/ConvertText.psm1
 Import-Module ./tools/PathHelper.psm1
+Import-Module ./tools/ConvertImage.psm1
 
 function Read-DirectoryToJson([string] $DirName) {
     $JsonIndexFile = Get-FullPathString (Get-FullPathString $ResultPath $DirName) ($DirName + ".json")
@@ -25,7 +26,7 @@ function Read-DirectoryToJson([string] $DirName) {
         directory       = $DirName
         original_name   = $null
         description     = $null
-        files           = @()
+        files           = @{}
     }
 }
 
@@ -39,7 +40,7 @@ if (-Not (Test-Path $ResultPath)) {
 }
 
 # Обработка под-папок
-foreach ($SourceDirName in Get-ChildItem $SourcePath | Select-Object -ExpandProperty "Name") {
+foreach ($SourceDirName in Get-ChildItem $SourcePath -Name) {
     # папка результатов обработки
     $ResultDir = Get-DirectoryOrCreate $SourceDirName
 
@@ -48,6 +49,30 @@ foreach ($SourceDirName in Get-ChildItem $SourcePath | Select-Object -ExpandProp
 
     if ($null -eq $ResultDirIndex.original_name) {
         $ResultDirIndex.original_name = $SourceDirName
+    }
+
+    # обработаем отсканированные исходники в текущей папке
+    $SourceDirFullPath = Get-FullPathString $SourcePath $SourceDirName
+    $ResultDirFullPath = Get-FullPathString $ResultPath $ResultDir
+    Get-ChildItem $SourceDirFullPath | ForEach-Object -Process {
+        # полный путь к скану
+        $SourceFileFullPath = Get-FullPathString $SourceDirFullPath $_.Name
+
+        # полный путь
+        $OutputFileName = Get-FullPathString $ResultDirFullPath ( ConvertTo-Translit $_.Name )
+
+        # контрольная сумма скана
+        $MD5sum = Get-FileHash $SourceFileFullPath
+
+        # если файла нет в индексе, то обработаем его
+        if ($null -eq $ResultDirIndex.files[$MD5sum.Hash]) {
+            switch ($_.Extension) {
+                ".pdf"  { Convert-PdfToTiff -InputPdfFile  $_ -OutputTiffFileName $OutputFileName }
+                ".tiff" { Optimize-Tiff     -InputTiffFile $_ -OutputTiffFileName $OutputFileName } 
+                Default { <# do nothing #> }
+            }
+        }
+
     }
 
     $JsonIndexFile = Get-FullPathString (Get-FullPathString $ResultPath $ResultDir) ($ResultDir + ".json")
