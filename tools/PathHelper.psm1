@@ -21,7 +21,14 @@ function Get-DirectoryOrCreate([string] $DirName)  {
 
 function Get-TagsFromName([string] $FileName)
 {
-    ( $FileName -split "[_-]" ) -match "^[^\s\d]+$"
+    $Tags = ( $FileName -split "[_-]" ) -notmatch "^[\d\s.,]+$"
+
+    for ($i = 0; $i -lt $Tags.Count; $i++) {
+        $Tags[$i] = $Tags[$i] -creplace "(?<first>[\w]+?)(?<second>\p{Lu}[\w]+)", '${first} ${second}'
+        $Tags[$i] = $Tags[$i] -creplace "(?<first>[\w]+?)(?<second>[\d.,]+)", '${first} ${second}'
+    }
+
+    $Tags
 }
 
 function Get-YearFromFilename([string] $FileName)

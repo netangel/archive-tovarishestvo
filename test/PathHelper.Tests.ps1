@@ -14,4 +14,16 @@ Describe 'File name => tags' {
     It 'Two words tag' {
         Get-TagsFromName 'TwoWords_Tag' | Should -Be @('Two Words', 'Tag') 
     }
+    
+    It 'Multi words with number' {
+        Get-TagsFromName '020_Канифас_Блок_СтальнойТрос_Диам9,5_Детали_СудовоеУстройство' 
+            | Should -Be @(
+                'Канифас',
+                'Блок',
+                'Стальной Трос',
+                'Диам 9,5',
+                'Детали',
+                'Судовое Устройство'
+            )
+    }
 }
