@@ -26,4 +26,16 @@ Describe 'File name => tags' {
                 'Судовое Устройство'
             )
     }
+
+    It 'Triple words tag' {
+        Get-TagsFromName '001_БотДляМурмана' | Should -Be @('Бот Для Мурмана') 
+    }
+    
+    It 'Digits and words tag' {
+        Get-TagsFromName '90Тонн' | Should -Be @('90 Тонн') 
+    }
+    
+    It 'Many digits and words tag' {
+        Get-TagsFromName '1000И1Ночь' | Should -Be @('1000 и 1Ночь') 
+    }
 }

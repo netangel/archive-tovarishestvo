@@ -24,8 +24,11 @@ function Get-TagsFromName([string] $FileName)
     $Tags = ( $FileName -split "[_-]" ) -notmatch "^[\d\s.,]+$"
 
     for ($i = 0; $i -lt $Tags.Count; $i++) {
-        $Tags[$i] = $Tags[$i] -creplace "(?<first>[\w]+?)(?<second>\p{Lu}[\w]+)", '${first} ${second}'
-        $Tags[$i] = $Tags[$i] -creplace "(?<first>[\w]+?)(?<second>[\d.,]+)", '${first} ${second}'
+        while ($Tags[$i] -cmatch "[^\d\s.,]+?[\p{Lu}\d]+") {   
+            $Tags[$i] = $Tags[$i] -creplace "(?<begin>.*?)(?<first>\w+?)(?<second>\p{Lu}\w+)", '${begin}${first} ${second}'
+            $Tags[$i] = $Tags[$i] -creplace "(?<begin>.*?)(?<first>[^\d]+?)(?<second>[\d.,]+)", '${begin}${first} ${second}'
+        }
+        $Tags[$i] = $Tags[$i] -creplace "^(?<first>[\d.,]+)(?<second>\w+)$", '${first} ${second}'
     }
 
     $Tags
