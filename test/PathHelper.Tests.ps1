@@ -39,3 +39,22 @@ Describe 'File name => tags' {
         Get-TagsFromName '1000И1Ночь' | Should -Be @('1000 и 1Ночь') 
     }
 }
+
+
+Describe 'File name => year(s)' {
+    It 'Single year' {
+        Get-YearFromFilename '3999_ЧтоТоТам_ВНазвании_1966' | Should -Be '1966' 
+    }
+    
+    It 'Period with _' {
+        Get-YearFromFilename '3999_ЧтоТоТам_ВНазвании_1966_1965' | Should -Be '1966-1965' 
+    }
+    
+    It 'Period with -' {
+        Get-YearFromFilename '3999_ЧтоТоТам_ВНазвании_1966-1965' | Should -Be '1966-1965' 
+    }
+
+    It 'null' {
+        Get-YearFromFilename '3999_ЧтоТоТам_ВНазвании_БезГода' | Should -Be $null 
+    }
+}

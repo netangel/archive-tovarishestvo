@@ -36,7 +36,11 @@ function Get-TagsFromName([string] $FileName)
 
 function Get-YearFromFilename([string] $FileName)
 {
-
+    if ($FileName -match ".*?(?<year>\d+?[-_]?\d+)$") {
+        return $Matches.year.Replace('_', '-')
+    }
+    
+    return $null
 }
 
-Export-ModuleMember -Function Get-FullPathString, Get-DirectoryOrCreate, Get-TagsFromName
+Export-ModuleMember -Function Get-FullPathString, Get-DirectoryOrCreate, Get-TagsFromName, Get-YearFromFilename

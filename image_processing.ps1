@@ -63,9 +63,11 @@ foreach ($SourceDirName in Get-ChildItem $SourcePath -Name) {
     Get-ChildItem $SourceDirFullPath | ForEach-Object -Process {
         # полный путь к скану
         $SourceFileFullPath = Get-FullPathString $SourceDirFullPath $_.Name
+        
+        $TranslitFileName = ConvertTo-Translit $_.BaseName; 
 
         # полный путь
-        $OutputFileName = ( Get-FullPathString $ResultDirFullPath ( ConvertTo-Translit $_.BaseName )) + ".tiff"
+        $OutputFileName = ( Get-FullPathString $ResultDirFullPath $TranslitFileName) + ".tiff"
 
         # контрольная сумма скана
         $MD5sum = (Get-FileHash $SourceFileFullPath MD5).Hash
@@ -80,10 +82,10 @@ foreach ($SourceDirName in Get-ChildItem $SourcePath -Name) {
             # }
 
             $NewFileData = [PSCustomObject]@{
-                ResultFileName  = ( ConvertTo-Translit $_.BaseName ) + ".tiff"
+                ResultFileName  = $TranslitFileName + ".tiff"
                 OriginalName    = $_.Name
                 Tags            = Get-TagsFromName $_.BaseName
-                Year            = 0
+                Year            = Get-YearFromFilename $_.BaseName
                 Description     = $null
                 Thumbnails      = Get-Thumbnails $OutputFileName
             }
