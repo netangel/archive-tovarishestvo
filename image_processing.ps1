@@ -32,7 +32,9 @@ function Read-DirectoryToJson([string] $DirName) {
 
 function Get-Thumbnails([string] $FileName)
 {
-    return @()
+    [PSCustomObject]@{
+        400 = New-Thumbnail $FileName 400
+    }
 }
 
 # Проверим, если папки существуют
@@ -67,7 +69,7 @@ foreach ($SourceDirName in Get-ChildItem $SourcePath -Name) {
         $TranslitFileName = ConvertTo-Translit $_.BaseName; 
 
         # полный путь
-        $OutputFileName = ( Get-FullPathString $ResultDirFullPath $TranslitFileName) + ".tiff"
+        $OutputFileName = ( Get-FullPathString $ResultDirFullPath $TranslitFileName ) + ".tiff"
 
         # контрольная сумма скана
         $MD5sum = (Get-FileHash $SourceFileFullPath MD5).Hash
@@ -75,14 +77,18 @@ foreach ($SourceDirName in Get-ChildItem $SourcePath -Name) {
         # если файла нет в индексе, то обработаем его
         if ($null -eq $ResultDirIndex.Files.$MD5sum) {
         
-            # switch ($_.Extension) {
-            #     ".pdf"  { Convert-PdfToTiff -InputPdfFile  $_ -OutputTiffFileName $OutputFileName }
-            #     ".tiff" { Optimize-Tiff     -InputTiffFile $_ -OutputTiffFileName $OutputFileName } 
-            #     Default { <# do nothing #> }
-            # }
+            # Проверим, если есть уже сконвертированные файлы
+            if (-not (Test-Path $OutputFileName)) {
+                # switch ($_.Extension) {
+                #     ".pdf"  { Convert-PdfToTiff -InputPdfFile  $_ -OutputTiffFileName $OutputFileName }
+                #     ".tiff" { Optimize-Tiff     -InputTiffFile $_ -OutputTiffFileName $OutputFileName } 
+                #     Default { <# do nothing #> }
+                # }
+            }
 
             $NewFileData = [PSCustomObject]@{
                 ResultFileName  = $TranslitFileName + ".tiff"
+                PngFile         = $null
                 OriginalName    = $_.Name
                 Tags            = Get-TagsFromName $_.BaseName
                 Year            = Get-YearFromFilename $_.BaseName

@@ -1,4 +1,5 @@
-$PathSeparator = $IsWindows ? "\" : "/" 
+$PathSeparator = $IsWindows ? "\" : "/"
+$ThumbnailDir = "Thumbnails"
 
 function Get-FullPathString([string] $FirstPart, [string] $SecondPart)
 {
@@ -25,7 +26,7 @@ function Get-TagsFromName([string] $FileName)
 
     for ($i = 0; $i -lt $Tags.Count; $i++) {
         while ($Tags[$i] -cmatch "[^\d\s.,]+?[\p{Lu}\d]+") {   
-            $Tags[$i] = $Tags[$i] -creplace "(?<begin>.*?)(?<first>\w+?)(?<second>\p{Lu}\w+)", '${begin}${first} ${second}'
+            $Tags[$i] = $Tags[$i] -creplace "(?<begin>.*?)(?<first>\w+?)(?<second>\p{Lu}\w*)", '${begin}${first} ${second}'
             $Tags[$i] = $Tags[$i] -creplace "(?<begin>.*?)(?<first>[^\d]+?)(?<second>[\d.,]+)", '${begin}${first} ${second}'
         }
         $Tags[$i] = $Tags[$i] -creplace "^(?<first>[\d.,]+)(?<second>\w+)$", '${first} ${second}'
@@ -43,4 +44,22 @@ function Get-YearFromFilename([string] $FileName)
     return $null
 }
 
-Export-ModuleMember -Function Get-FullPathString, Get-DirectoryOrCreate, Get-TagsFromName, Get-YearFromFilename
+function Get-ThumbnailFileName {
+    param (
+        [string]$SourceFileName,
+        [int]$Pixels
+    )
+   
+    if ($SourceFileName -match "^(?<path>.*)[\/\\](?<filename>.*?).tiff$") {
+        return $Matches.path + $PathSeparator + $ThumbnailDir + $PathSeparator + $Matches.filename + '_' + $Pixels + '.png'
+    }
+
+    if ($SourceFileName -match "^(?<filename>.*?).tiff$") {
+        return $ThumbnailDir + $PathSeparator + $Matches.filename + '_' + $Pixels + '.png'
+    }
+
+    return $null
+}
+
+Export-ModuleMember -Function Get-FullPathString, Get-DirectoryOrCreate, Get-TagsFromName, Get-YearFromFilename,
+                                Get-ThumbnailFileName

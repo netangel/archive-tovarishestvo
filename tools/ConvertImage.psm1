@@ -28,8 +28,6 @@ function Get-ImageMagickTool {
 
 }
 
-
-
 function Convert-PdfToTiff {
     Param(
         # Input file object
@@ -73,5 +71,17 @@ function Optimize-Tiff {
     & Get-ImageMagickTool convert $InputTiffFile.FullName -colorspace Gray -quality 100 -resize 50% $OutputTiffFileName
 }
 
-Export-ModuleMember -Function Convert-PdfToTiff
-Export-ModuleMember -Function Optimize-Tiff 
+function New-Thumbnail {
+    param (
+        [string]$InputFileName,
+        [int]$Pixels
+    )
+
+    $ThumbnailFile = Get-ThumbnailFileName $InputFileName $Pixels
+
+    # & Get-ImageMagickTool $InputFileName -resize ($Pixels + 'x' + $Pixels) $ThumbnailFile
+    
+    $ThumbnailFile
+}
+
+Export-ModuleMember -Function Convert-PdfToTiff, Optimize-Tiff, New-Thumbnail

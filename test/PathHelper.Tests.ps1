@@ -58,3 +58,15 @@ Describe 'File name => year(s)' {
         Get-YearFromFilename '3999_ЧтоТоТам_ВНазвании_БезГода' | Should -Be $null 
     }
 }
+
+Describe 'File name => Thumbnail file name' {
+    It 'File name with path' {
+        Get-ThumbnailFileName '../test/filename.tiff' 500 
+            | Should -Be ('../test/Thumbnails/filename_500.png')
+    }
+    
+    It 'Just file name' {
+        Get-ThumbnailFileName 'filename.tiff' 500 
+            | Should -Be ('Thumbnails/filename_500.png')
+    }
+}
