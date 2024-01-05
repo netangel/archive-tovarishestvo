@@ -10,11 +10,11 @@ function Get-FullPathString([string] $FirstPart, [string] $SecondPart)
     $FirstPart + $SecondPart
 }
 
-function Get-DirectoryOrCreate([string] $DirName)  {
+function Get-DirectoryOrCreate([string] $BasePath, [string] $DirName)  {
     $TranslitName = ConvertTo-Translit $DirName
 
-    if (-not (Test-Path (Get-FullPathString $ResultPath $TranslitName))) {
-        New-Item -Path $ResultPath -ItemType Directory -Name $TranslitName | Out-Null
+    if (-not (Test-Path (Get-FullPathString $BasePath $TranslitName))) {
+        New-Item -Path $BasePath -ItemType Directory -Name $TranslitName | Out-Null
     }
 
     return $TranslitName
@@ -50,7 +50,7 @@ function Get-ThumbnailFileName {
         [int]$Pixels
     )
    
-    if ($SourceFileName -match "^(?<path>.*)[\/\\](?<filename>.*?).tiff$") {
+    if ($SourceFileName -match "^(?<path>.*)[\/\\](?<filename>.*?).tif$") {
         return $Matches.path + $PathSeparator + $ThumbnailDir + $PathSeparator + $Matches.filename + '_' + $Pixels + '.png'
     }
 
@@ -61,5 +61,9 @@ function Get-ThumbnailFileName {
     return $null
 }
 
+function Get-ThumbnailDir () {
+    return $ThumbnailDir
+}
+
 Export-ModuleMember -Function Get-FullPathString, Get-DirectoryOrCreate, Get-TagsFromName, Get-YearFromFilename,
-                                Get-ThumbnailFileName
+                                Get-ThumbnailFileName, Get-ThumbnailDir
