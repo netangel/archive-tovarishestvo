@@ -73,10 +73,11 @@ function Optimize-Tiff {
     & $cmd convert $InputTiffFile.FullName -colorspace Gray -quality 100 -resize 50% $OutputTiffFileName
 }
 
-function New-Thumbnail {
+function New-ThumbnailOrCopy {
     param (
         [string]$InputFileName,
-        [int]$Pixels
+        [int]$Pixels,
+        [string]$OldFileName
     )
 
     $ThumbnailFile = Get-ThumbnailFileName $InputFileName $Pixels
@@ -91,10 +92,19 @@ function New-Thumbnail {
     return $ThumbnailFile
 }
 
-function Get-WebPng {
+function  Convert-WebPngOrRename {
     param (
-        [string] $InputFileName
+        [string]$InputFileName,
+        [string]$OldFileName
     )
+
+    if (($null -ne $OldFileName) -and (Test-Path $OldFileName)) {
+        $WebPngFile = $InputFileName.Replace('.tif', '.png')
+        Copy-Item -Path $OldFileName -Destination $WebPngFile
+        Remove-Item $OldFileName
+
+        return $WebPngFile
+    }
 
     if (-not (Test-Path $InputFileName)) {
         throw "Исходный файл не найден"
@@ -112,4 +122,4 @@ function Get-WebPng {
     return $WebPngFile
 }
 
-Export-ModuleMember -Function Convert-PdfToTiff, Optimize-Tiff, New-Thumbnail, Get-WebPng
+Export-ModuleMember -Function Convert-PdfToTiff, Optimize-Tiff, New-Thumbnail, Convert-WebPnOrRename
