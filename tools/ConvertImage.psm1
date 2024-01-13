@@ -83,7 +83,7 @@ function New-ThumbnailOrCopy {
     $ThumbnailFile = Get-ThumbnailFileName $InputFileName $Pixels
 
     $cmd = Get-ImageMagickTool
-    & $cmd $InputFileName -resize "${Pixels}x${Pixels}" $ThumbnailFile
+    & $cmd $InputFileName -thumbnail "${Pixels}x${Pixels}" -strip -quality 95 $ThumbnailFile
     
     if ($ThumbnailFile -match "^.*[\/\\](?<filename>.*?)$") {
         return $Matches.filename
@@ -103,6 +103,10 @@ function  Convert-WebPngOrRename {
         Copy-Item -Path $OldFileName -Destination $WebPngFile
         Remove-Item $OldFileName
 
+        if ($WebPngFile -match "^.*[\/\\](?<filename>.*?)$") {
+            return $Matches.filename
+        }
+        
         return $WebPngFile
     }
 
@@ -122,4 +126,4 @@ function  Convert-WebPngOrRename {
     return $WebPngFile
 }
 
-Export-ModuleMember -Function Convert-PdfToTiff, Optimize-Tiff, New-Thumbnail, Convert-WebPnOrRename
+Export-ModuleMember -Function Convert-PdfToTiff, Optimize-Tiff, New-ThumbnailOrCopy, Convert-WebPngOrRename

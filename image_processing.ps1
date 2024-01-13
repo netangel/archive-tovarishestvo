@@ -41,6 +41,7 @@ function Convert-ScanOrRename {
     if (($null -ne $OldFileName) -and (Test-Path $OldFileName)) {
         Copy-Item -Path $OldFileName -Destination $OutputFileName
         Remove-Item $OldFileName
+        return 
     }
 
     if ( -not (Test-Path ($OutputFileName)) ) {
@@ -102,7 +103,7 @@ foreach ($SourceDirName in Get-ChildItem $SourcePath -Name) {
         # если файла нет в индексе, то обработаем его
         if ($null -eq $ResultDirIndex.Files.$MD5sum) {
        
-            Convert-ScanOrRename $_, $OutputFileName
+            Convert-ScanOrRename $_ $OutputFileName
 
             # Проверим, если есть уже сконвертированные файлы
             $NewFileData = [PSCustomObject]@{
@@ -121,31 +122,32 @@ foreach ($SourceDirName in Get-ChildItem $SourcePath -Name) {
             # Файл уже существует
             $ExistedFileData = $ResultDirIndex.Files.$MD5sum
 
-            if ($ExistedFileData.OriginalName -ceq $_.Name) {
-                continue
-            }
+            if ($ExistedFileData.OriginalName -cne $_.Name) {
 
-            $OldFileName = Get-FullPathString $ResultDirFullPath, $ExistedFileData.$TranslitFileName
+                $OldFileName = Get-FullPathString $ResultDirFullPath $ExistedFileData.ResultFileName
 
-            # Изменилось имя файла?
-            # * Новое имя => транслитерация + скопировать старые обработанные файлы 
-            # * Новые теги
-            # * Обновить данные в структуре
-            Convert-ScanOrRename $_ $OutputFileName $OldFileName 
-            $WebPngFile = Convert-WebPngOrRename $OutputFileName (Get-FullPathString $ResultDirFullPath $ExistedFileData.PngFile)
+                # Изменилось имя файла?
+                # * Новое имя => транслитерация + скопировать старые обработанные файлы 
+                # * Новые теги
+                # * Обновить данные в структуре
+                Convert-ScanOrRename $_ $OutputFileName $OldFileName 
+                $WebPngFile = Convert-WebPngOrRename $OutputFileName (Get-FullPathString $ResultDirFullPath $ExistedFileData.PngFile)
 
-            $ResultDirIndex.Files.$MD5sum = [PSCustomObject]@{
-                ResultFileName = $TranslitFileName
-                PngFile        = $WebPngFile
-                OriginalName   = $_.Name
-                Tags           = Get-TagsFromName $_.BaseName
-                Year           = Get-YearFromFilename $_.BaseName
-                Description    = $null
-                Thumbnails     = Get-Thumbnails $OutputFileName $OldFileName
+                $UpdatedFileData = [PSCustomObject]@{
+                    ResultFileName = $TranslitFileName
+                    PngFile        = $WebPngFile
+                    OriginalName   = $_.Name
+                    Tags           = Get-TagsFromName $_.BaseName
+                    Year           = Get-YearFromFilename $_.BaseName
+                    Description    = $null
+                    Thumbnails     = Get-Thumbnails $OutputFileName $OldFileName
+                }
+
+                $ResultDirIndex.Files | Add-Member -MemberType NoteProperty -Name $MD5sum -Value $UpdatedFileData -Force
             }
         }
     }
 
     $JsonIndexFile = Get-FullPathString (Get-FullPathString $ResultPath $ResultDir) ($ResultDir + ".json")
-    $ResultDirIndex | ConvertTo-Json -depth 10 | Set-Content -Path $JsonIndexFile
+    $ResultDirIndex | ConvertTo-Json -depth 10 | Set-Content -Path $JsonIndexFile -Force
 }
