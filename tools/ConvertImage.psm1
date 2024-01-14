@@ -2,11 +2,11 @@
 $ImageMagickTool = '..\..\tools\imagemagic\magick.exe'
 
 function Get-PDFConvereter {
-    if (Get-Item -Path $GhostScriptTool) {
+    if (Test-Path $GhostScriptTool) {
         return $GhostScriptTool
     }
     elseif (Get-Command "gsc" -ErrorAction SilentlyContinue) {
-        Write-Output "No tool gswin64.exe"
+        Write-Error "No tool gswin64.exe"
         return "gsc"
     }
     else {
@@ -15,11 +15,11 @@ function Get-PDFConvereter {
 }
 
 function Get-ImageMagickTool {
-    if (Get-Item -Path $ImageMagickTool) {
+    if (Test-Path $ImageMagickTool) {
         return $ImageMagickTool
     }
     elseif (Get-Command "magick" -ErrorAction SilentlyContinue) {
-        Write-Output "No tools magic.exe" 
+        Write-Error "No tools magic.exe" 
         return "magick"
     }
     else {
@@ -41,9 +41,10 @@ function Convert-PdfToTiff {
 
     process {
         $InputFileName = $InputPdfFile.FullName
-        & Get-PDFConvereter -dNOPAUSE -sDEVICE=tiffgray ("-sOutputFile=" + $OutputTiffFileName) -q -r300 $InputFileName -c quit
+        $cmd = Get-PDFConvereter
+        & $cmd -dNOPAUSE -sDEVICE=tiffgray ("-sOutputFile=" + $OutputTiffFileName) -q -r300 $InputFileName -c quit
 
-        $OutputTiffFile = Get-Item $OutputTiffFileName
+        $OutputTiffFile = Get-Item $OutputTiffFileName -ErrorAction SilentlyContinue
 
         if ($null -eq $OutputTiffFile) {
             throw "Не получилось сконвертировать pdf файл: " + $InputFileName
@@ -52,7 +53,7 @@ function Convert-PdfToTiff {
         
         if ($OutputTiffFile.Length -gt ($InputPdfFile.Length / 4)) {
             # original pdf has 300dpi
-            Optimize-Tiff($OutputTiffFile, $OutputTiffFileName)
+            Optimize-Tiff $OutputTiffFile, $OutputTiffFileName
         }
 
         # return Get-Item $OutputTiffFileName
@@ -68,8 +69,61 @@ function Optimize-Tiff {
         [string] $OutputTiffFileName
     )
 
-    & Get-ImageMagickTool convert $InputTiffFile.FullName -colorspace Gray -quality 100 -resize 50% $OutputTiffFileName
+    $cmd = Get-ImageMagickTool 
+    & $cmd convert $InputTiffFile.FullName -colorspace Gray -quality 100 -resize 50% $OutputTiffFileName
 }
 
-Export-ModuleMember -Function Convert-PdfToTiff
-Export-ModuleMember -Function Optimize-Tiff 
+function New-ThumbnailOrCopy {
+    param (
+        [string]$InputFileName,
+        [int]$Pixels,
+        [string]$OldFileName
+    )
+
+    $ThumbnailFile = Get-ThumbnailFileName $InputFileName $Pixels
+
+    $cmd = Get-ImageMagickTool
+    & $cmd $InputFileName -thumbnail "${Pixels}x${Pixels}" -strip -quality 95 $ThumbnailFile
+    
+    if ($ThumbnailFile -match "^.*[\/\\](?<filename>.*?)$") {
+        return $Matches.filename
+    }
+
+    return $ThumbnailFile
+}
+
+function  Convert-WebPngOrRename {
+    param (
+        [string]$InputFileName,
+        [string]$OldFileName
+    )
+
+    if (($null -ne $OldFileName) -and (Test-Path $OldFileName)) {
+        $WebPngFile = $InputFileName.Replace('.tif', '.png')
+        Copy-Item -Path $OldFileName -Destination $WebPngFile
+        Remove-Item $OldFileName
+
+        if ($WebPngFile -match "^.*[\/\\](?<filename>.*?)$") {
+            return $Matches.filename
+        }
+        
+        return $WebPngFile
+    }
+
+    if (-not (Test-Path $InputFileName)) {
+        throw "Исходный файл не найден"
+    }
+
+    $WebPngFile = $InputFileName.Replace('.tif', '.png')
+   
+    $cmd = Get-ImageMagickTool 
+    & $cmd convert $InputFileName -quality 100 $WebPngFile
+    
+    if ($WebPngFile -match "^.*[\/\\](?<filename>.*?)$") {
+        return $Matches.filename
+    }
+
+    return $WebPngFile
+}
+
+Export-ModuleMember -Function Convert-PdfToTiff, Optimize-Tiff, New-ThumbnailOrCopy, Convert-WebPngOrRename
