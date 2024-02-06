@@ -14,21 +14,7 @@ Param(
 Import-Module ./tools/ConvertText.psm1
 Import-Module ./tools/PathHelper.psm1
 Import-Module ./tools/ConvertImage.psm1
-
-function Read-DirectoryToJson([string] $DirName) {
-    $JsonIndexFile = Get-FullPathString (Get-FullPathString $ResultPath $DirName) ($DirName + ".json")
-    
-    if ((Test-Path $JsonIndexFile) -and (Test-Json -Path $JsonIndexFile)) {
-        return Get-Content -Path $JsonIndexFile | ConvertFrom-Json
-    }
-    
-    [PSCustomObject]@{
-        Directory    = $DirName
-        OriginalName = $null
-        Description  = $null
-        Files        = [PSCustomObject]@{}
-    }
-}
+Import-Module ./tools/JsonHelper.psm1
 
 function Convert-ScanOrRename {
     param (
@@ -87,7 +73,7 @@ foreach ($SourceDirName in Get-ChildItem $SourcePath -Name) {
     $ResultDirFullPath = Get-FullPathString $ResultPath $ResultDir
 
     # Папка для миниатюр, на всякий случай
-    Get-DirectoryOrCreate $ResultDirFullPath ( Get-ThumbnailDir )
+    $null = Get-DirectoryOrCreate $ResultDirFullPath ( Get-ThumbnailDir ) 
 
     # обработаем отсканированные исходники в текущей папке
     Get-ChildItem $SourceDirFullPath | ForEach-Object -Process {
