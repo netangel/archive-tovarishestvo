@@ -4,12 +4,20 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+        
         {
-            "name": "PowerShell: Launch Current File",
+            "name": "PowerShell: Run processing for scanned files",
             "type": "PowerShell",
             "request": "launch",
             "script": "${file}",
             "args": [ "-SourcePath ../test-data/source/", "-ResultPath ../test-data/results/" ]
+        },
+        {
+            "name": "PowerShell: Run index and tags creation",
+            "type": "PowerShell",
+            "request": "launch",
+            "script": "${file}",
+            "args": [ "-ResultPath ../test-data/results/" ]
         }
     ]
 }

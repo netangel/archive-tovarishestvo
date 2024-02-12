@@ -65,7 +65,7 @@ foreach ($SourceDirName in Get-ChildItem $SourcePath -Name) {
     # Индекс для папки
     $ResultDirIndex = Read-DirectoryToJson $ResultDir
 
-    if ($null -eq $ResultDirIndex.original_name) {
+    if ($null -eq $ResultDirIndex.OriginalName) {
         $ResultDirIndex.OriginalName = $SourceDirName
     }
 
