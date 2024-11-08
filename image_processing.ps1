@@ -1,4 +1,4 @@
-# Параметры
+# Параметры командной строки
 Param(
     # Папка с оригиналами
     [Parameter(Mandatory, HelpMessage = "Путь к папке с оригиналами чертежей")]
@@ -39,13 +39,14 @@ function Convert-ScanOrRename {
     }
 }
 
+
 function Get-Thumbnails([string]$FileName, [string]$OldFileName) {
     [PSCustomObject]@{
         400 = ( New-ThumbnailOrCopy $FileName 400 $OldFileName )
     }
 }
 
-# Проверим, если папки существуют
+# Проверим, если папки указанные в параметрах запуска существуют
 if (-Not (Test-Path $SourcePath)) {
     throw "Папка с оригиналами ($SourcePath) не найдена!"
 }
@@ -57,14 +58,16 @@ if (-Not (Test-Path $ResultPath)) {
 $SourcePath = Get-FullPathString $PSScriptRoot $SourcePath
 $ResultPath = Get-FullPathString $PSScriptRoot $ResultPath
 
-# Обработка под-папок
+# Обработка подпапок
 foreach ($SourceDirName in Get-ChildItem $SourcePath -Name) {
-    # папка результатов обработки
+    # Путь к папке с результатами обработки
+    # Создаем папку, если еще не существует
     $ResultDir = Get-DirectoryOrCreate $ResultPath $SourceDirName
 
-    # Индекс для папки
+    # Структура файлов и метаданные для чертежей в папке в виде JSON
     $ResultDirIndex = Read-DirectoryToJson $ResultDir
 
+    # Сохраним оригинальное имя папки в метаданных
     if ($null -eq $ResultDirIndex.OriginalName) {
         $ResultDirIndex.OriginalName = $SourceDirName
     }
@@ -72,18 +75,20 @@ foreach ($SourceDirName in Get-ChildItem $SourcePath -Name) {
     $SourceDirFullPath = Get-FullPathString $SourcePath $SourceDirName
     $ResultDirFullPath = Get-FullPathString $ResultPath $ResultDir
 
-    # Папка для миниатюр, на всякий случай
+    # Путь к папка с миниатюрами, на всякий случай
+    # Создадим, если не существует
     $null = Get-DirectoryOrCreate $ResultDirFullPath ( Get-ThumbnailDir ) 
 
-    # обработаем отсканированные исходники в текущей папке
+    # Обработаем отсканированные исходники в текущей папке
     Get-ChildItem $SourceDirFullPath | ForEach-Object -Process {
         # Имя файла скана латиницей
         $TranslitFileName = (ConvertTo-Translit $_.BaseName) + '.tif'; 
 
-        # полный путь файла для результата обработки
+        # Полный путь файла для результата обработки
         $OutputFileName = Get-FullPathString $ResultDirFullPath $TranslitFileName
 
-        # контрольная сумма скана
+        # Контрольная сумма скана
+        # Испльзуем ее как ключ в списке файлов (индексе)
         $MD5sum = (Get-FileHash $_.FullName MD5).Hash
 
         # если файла нет в индексе, то обработаем его

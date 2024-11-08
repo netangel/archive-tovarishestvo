@@ -1,4 +1,8 @@
-
+#
+#   Возвращает JSON объект, содержащий описание структуры текущей папки
+#   Если json для папки еще не создан (= папка обрабатывается впервые), 
+#   возвращаем пустую структуру данных 
+#
 function Read-DirectoryToJson([string] $DirName) {
     $JsonIndexFile = Get-FullPathString (Get-FullPathString $ResultPath $DirName) ($DirName + ".json")
     
