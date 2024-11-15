@@ -1,13 +1,8 @@
 $PathSeparator = $IsWindows ? "\" : "/"
 $ThumbnailDir = "Thumbnails"
 
-function Get-FullPathString([string] $FirstPart, [string] $SecondPart)
-{
-    if (-not ($FirstPart -match "\w$PathSeparator$")) {
-        $FirstPart += $PathSeparator
-    }
-
-    $FirstPart + $SecondPart
+function Get-FullPathString([string] $FirstPart, [string] $SecondPart) {
+    Join-Path $FirstPart $SecondPart
 }
 
 function Get-DirectoryOrCreate([string] $BasePath, [string] $DirName)  {
@@ -44,13 +39,14 @@ function Get-YearFromFilename([string] $FileName)
     return $null
 }
 
-function Get-ThumbnailFileName {
+function Get-ThumbnailFileName 
+{
     param (
         [string]$SourceFileName,
         [int]$Pixels
     )
-   
-    if ($SourceFileName -match "^(?<path>.*)[\/\\](?<filename>.*?).tif$") {
+
+    if ($SourceFileName -match "^(?<path>.+)[/\\](?<filename>.+?).tiff$") {
         return $Matches.path + $PathSeparator + $ThumbnailDir + $PathSeparator + $Matches.filename + '_' + $Pixels + '.png'
     }
 

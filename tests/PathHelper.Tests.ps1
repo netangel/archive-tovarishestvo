@@ -1,5 +1,5 @@
 BeforeAll {
-    Import-Module $PSScriptRoot/../tools/PathHelper.psm1
+    Import-Module $PSScriptRoot/../libs/PathHelper.psm1
 }
 
 Describe 'File name => tags' {

@@ -2,19 +2,31 @@
 Param(
     # Папка с оригиналами
     [Parameter(Mandatory, HelpMessage = "Путь к папке с оригиналами чертежей")]
-    [string]
-    $SourcePath,
+    [string] $SourcePath,
 
     # Папка с результатами конвертации
     [Parameter(Mandatory, HelpMessage = "Путь к папке с результатами конвертации")]
-    [string]
-    $ResultPath
+    [string] $ResultPath
 )
 
-Import-Module ./tools/ConvertText.psm1
-Import-Module ./tools/PathHelper.psm1
-Import-Module ./tools/ConvertImage.psm1
-Import-Module ./tools/JsonHelper.psm1
+Import-Module ./libs/ConvertText.psm1
+Import-Module ./libs/PathHelper.psm1
+Import-Module ./libs/ConvertImage.psm1
+Import-Module ./libs/JsonHelper.psm1
+
+function Test-RequiredPaths {
+    param (
+        [string]$SourcePath,
+        [string]$ResultPath
+    )
+    
+    if (-Not (Test-Path $SourcePath)) {
+        throw "Папка с оригиналами ($SourcePath) не найдена!"
+    }
+    if (-Not (Test-Path $ResultPath)) {
+        throw "Папка для результатов ($ResultPath) не найдена!"
+    }
+}
 
 function Convert-ScanOrRename {
     param (
