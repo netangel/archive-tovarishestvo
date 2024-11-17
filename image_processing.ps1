@@ -14,19 +14,10 @@ Import-Module ./libs/PathHelper.psm1
 Import-Module ./libs/ConvertImage.psm1
 Import-Module ./libs/JsonHelper.psm1
 
-function Test-RequiredPaths {
-    param (
-        [string]$SourcePath,
-        [string]$ResultPath
-    )
-    
-    if (-Not (Test-Path $SourcePath)) {
-        throw "Папка с оригиналами ($SourcePath) не найдена!"
-    }
-    if (-Not (Test-Path $ResultPath)) {
-        throw "Папка для результатов ($ResultPath) не найдена!"
-    }
-}
+# Проверим, если пути указанные в параметрах запуска существуют
+# Если нет, то выходим с ошибкой
+# В противном случае вернем полные пути
+($FullSourcePath, $FullResultPath) = Test-RequiredPathsAndReturn $SourcePath $ResultPath
 
 function Convert-ScanOrRename {
     param (

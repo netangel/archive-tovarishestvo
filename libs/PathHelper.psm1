@@ -15,6 +15,18 @@ function Get-DirectoryOrCreate([string] $BasePath, [string] $DirName)  {
     return $TranslitName
 }
 
+function Test-IsFullPath([string] $Path) {
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return $false
+    }
+    
+    if ($IsWindows) {
+        return [System.IO.Path]::IsPathRooted($Path) -and $Path -match '^[A-Za-z]:\\'
+    } else {
+        return $Path.StartsWith('/') -or $Path -match '^TestDrive:'
+    }
+}
+
 function Get-TagsFromName([string] $FileName)
 {
     $Tags = ( $FileName -split "[_-]" ) -notmatch "^[\d\s.,]+$"
@@ -61,5 +73,25 @@ function Get-ThumbnailDir () {
     return $ThumbnailDir
 }
 
+function Test-RequiredPathsAndReturn {
+    param (
+        [string]$SourcePath,
+        [string]$ResultPath,
+        [string]$ScriptRoot = $PSScriptRoot 
+    )
+    
+    $FullSourcePath = ( Test-IsFullPath $SourcePath ) ? $SourcePath : (Get-FullPathString $ScriptRoot $SourcePath)
+    $FullResultPath = ( Test-IsFullPath $ResultPath ) ? $ResultPath : (Get-FullPathString $ScriptRoot $ResultPath)
+
+    if (-Not (Test-Path $FullSourcePath)) {
+        throw "Папка с оригиналами ($FullSourcePath) не найдена!"
+    }
+    if (-Not (Test-Path $FullResultPath)) {
+        throw "Папка для результатов ($FullResultPath) не найдена!"
+    }
+
+    return $FullSourcePath, $FullResultPath
+}
+
 Export-ModuleMember -Function Get-FullPathString, Get-DirectoryOrCreate, Get-TagsFromName, Get-YearFromFilename,
-                                Get-ThumbnailFileName, Get-ThumbnailDir
+                                Get-ThumbnailFileName, Get-ThumbnailDir, Test-RequiredPathsAndReturn
