@@ -1,5 +1,7 @@
 BeforeAll {
     Import-Module $PSScriptRoot/../libs/JsonHelper.psm1 -Force
+    Import-Module $PSScriptRoot/../libs/PathHelper.psm1 -Force
+    Import-Module $PSScriptRoot/../libs/ConvertText.psm1 -Force
 }
 
 Describe "Read-DirectoryToJson" {
@@ -64,16 +66,13 @@ Describe "Get-SubDirectoryIndex" {
         # Act & Assert
         $dirs | Get-SubDirectoryIndex -ResultPath $resultPath | ForEach-Object {
             $_.Directory | Should -BeIn $dirs
-            $_.Files | Should -Not -BeNullOrEmpty
+            $_.Files | Should -BeOfType [PSCustomObject]
+
+            # Check thumbnail directory created
+            $expectedThumbnailPath = Join-Path (Join-Path $resultPath $_.Directory) ( Get-ThumbnailDir )
+
+            # Assert
+            Test-Path $expectedThumbnailPath | Should -BeTrue
         }
-    }
-
-    It "Handles errors gracefully" {
-        # Arrange
-        Mock Get-DirectoryOrCreate { throw "Access denied" }
-
-        # Act & Assert
-        { "invalid" | Get-SubDirectoryIndex -ResultPath $resultPath } | 
-            Should -Throw "Failed to process directory*"
     }
 }

@@ -54,7 +54,17 @@ function Get-Thumbnails([string]$FileName, [string]$OldFileName) {
 # или создадим новый, если папка обрабатывается впервые
 Get-ChildItem $FullSourcePath -Name | 
     Get-DirectoryPathAndIndex -ResultPath $ResultPath |
-    ForEach-Object {
+    ForEach-Object -Process {
+        # Обработаем файлы в текущей папке
+        Get-ChildItem (Join-Path $FullSourcePath $_.Path) -Name | 
+            ForEach-Object -Process {
+                # Путь к папка с миниатюрами, на всякий случай
+                # Создадим, если не существует
+                $null = Get-DirectoryOrCreate $ResultDirFullPath ( Get-ThumbnailDir ) 
+
+                $OutputFileName = Join-Path $ResultPath $_.Path $_.FileName
+                Convert-ScanOrRename $_.FullName $OutputFileName
+            }
 
     }
 

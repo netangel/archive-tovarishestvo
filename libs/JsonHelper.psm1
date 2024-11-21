@@ -33,9 +33,13 @@ function Get-SubDirectoryIndex {
         try {
             # Create result directory
             $ResultDir = Get-DirectoryOrCreate $ResultPath $SourceDirName
+           
+            # Путь к папка с миниатюрами, на всякий случай
+            # Создадим, если не существует
+            $null = Get-DirectoryOrCreate (Join-Path $ResultPath $ResultDir) ( Get-ThumbnailDir )  
             
             # Get JSON index and return object
-            Read-DirectoryToJson $ResultPath $ResultDir
+            Read-DirectoryToJson $ResultDir $ResultPath $SourceDirName
         }
         catch {
             Write-Error "Failed to process directory $SourceDirName`: $_"
@@ -44,4 +48,4 @@ function Get-SubDirectoryIndex {
     }
 }
 
-Export-ModuleMember -Function Read-DirectoryToJson
+Export-ModuleMember -Function Read-DirectoryToJson, Get-SubDirectoryIndex
