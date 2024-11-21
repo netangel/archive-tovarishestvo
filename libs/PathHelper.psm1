@@ -8,7 +8,7 @@ function Get-FullPathString([string] $FirstPart, [string] $SecondPart) {
 function Get-DirectoryOrCreate([string] $BasePath, [string] $DirName)  {
     $TranslitName = ConvertTo-Translit $DirName
 
-    if (-not (Test-Path (Get-FullPathString $BasePath $TranslitName))) {
+    if (-not (Test-Path (Join-Path $BasePath $TranslitName))) {
         New-Item -Path $BasePath -ItemType Directory -Name $TranslitName | Out-Null
     }
 

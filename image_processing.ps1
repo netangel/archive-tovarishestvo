@@ -49,21 +49,19 @@ function Get-Thumbnails([string]$FileName, [string]$OldFileName) {
     }
 }
 
-# Проверим, если папки указанные в параметрах запуска существуют
-if (-Not (Test-Path $SourcePath)) {
-    throw "Папка с оригиналами ($SourcePath) не найдена!"
-}
 
-if (-Not (Test-Path $ResultPath)) {
-    throw "Папка для результатов ($ResultPath) не найдена!"
-}
+# Обработка корневой папки, для каждой папки внутри прочитаем индекс
+# или создадим новый, если папка обрабатывается впервые
+Get-ChildItem $FullSourcePath -Name | 
+    Get-DirectoryPathAndIndex -ResultPath $ResultPath |
+    ForEach-Object {
 
-$SourcePath = Get-FullPathString $PSScriptRoot $SourcePath
-$ResultPath = Get-FullPathString $PSScriptRoot $ResultPath
+    }
+
 
 # Обработка подпапок
-foreach ($SourceDirName in Get-ChildItem $SourcePath -Name) {
-    # Путь к папке с результатами обработки
+foreach ($SourceDirName in Get-ChildItem $FullSourcePath -Name) {
+    # Полный путь к папке с результатами обработки
     # Создаем папку, если еще не существует
     $ResultDir = Get-DirectoryOrCreate $ResultPath $SourceDirName
 
