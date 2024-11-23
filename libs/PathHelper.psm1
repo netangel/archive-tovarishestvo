@@ -1,4 +1,3 @@
-$PathSeparator = $IsWindows ? "\" : "/"
 $ThumbnailDir = "Thumbnails"
 
 function Get-FullPathString([string] $FirstPart, [string] $SecondPart) {
@@ -58,15 +57,19 @@ function Get-ThumbnailFileName
         [int]$Pixels
     )
 
-    if ($SourceFileName -match "^(?<path>.+)[/\\](?<filename>.+?).tiff$") {
-        return $Matches.path + $PathSeparator + $ThumbnailDir + $PathSeparator + $Matches.filename + '_' + $Pixels + '.png'
+    if (-not $SourceFileName.EndsWith('.tiff')) {
+        return $null
     }
 
-    if ($SourceFileName -match "^(?<filename>.*?).tiff$") {
-        return $ThumbnailDir + $PathSeparator + $Matches.filename + '_' + $Pixels + '.png'
+    $BaseName = [System.IO.Path]::GetFileNameWithoutExtension($SourceFileName)
+    $ThumbnailName = "${BaseName}_${Pixels}.png"
+    $Directory = Split-Path -Path $SourceFileName -Parent
+
+    if ($Directory) {
+        return Join-Path (Join-Path $Directory $ThumbnailDir) $ThumbnailName
     }
 
-    return $null
+    return Join-Path $ThumbnailDir $ThumbnailName
 }
 
 function Get-ThumbnailDir () {

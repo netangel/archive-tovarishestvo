@@ -76,8 +76,7 @@ function Optimize-Tiff {
 function New-ThumbnailOrCopy {
     param (
         [string]$InputFileName,
-        [int]$Pixels,
-        [string]$OldFileName
+        [int]$Pixels
     )
 
     $ThumbnailFile = Get-ThumbnailFileName $InputFileName $Pixels
@@ -94,21 +93,8 @@ function New-ThumbnailOrCopy {
 
 function  Convert-WebPngOrRename {
     param (
-        [string]$InputFileName,
-        [string]$OldFileName
+        [string]$InputFileName
     )
-
-    if (($null -ne $OldFileName) -and (Test-Path $OldFileName)) {
-        $WebPngFile = $InputFileName.Replace('.tif', '.png')
-        Copy-Item -Path $OldFileName -Destination $WebPngFile
-        Remove-Item $OldFileName
-
-        if ($WebPngFile -match "^.*[\/\\](?<filename>.*?)$") {
-            return $Matches.filename
-        }
-        
-        return $WebPngFile
-    }
 
     if (-not (Test-Path $InputFileName)) {
         throw "Исходный файл не найден"

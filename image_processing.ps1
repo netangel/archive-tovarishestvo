@@ -43,113 +43,50 @@ function Convert-ScanOrRename {
 }
 
 
-function Get-Thumbnails([string]$FileName, [string]$OldFileName) {
-    [PSCustomObject]@{
-        400 = ( New-ThumbnailOrCopy $FileName 400 $OldFileName )
-    }
-}
-
 
 # Обработка корневой папки, для каждой папки внутри прочитаем индекс
 # или создадим новый, если папка обрабатывается впервые
 Get-ChildItem $FullSourcePath -Name | 
     Get-DirectoryPathAndIndex -ResultPath $ResultPath |
     ForEach-Object -Process {
-        # Обработаем файлы в текущей папке
-        Get-ChildItem (Join-Path $FullSourcePath $_.Path) -Name | 
-            ForEach-Object -Process {
-                # Путь к папка с миниатюрами, на всякий случай
-                # Создадим, если не существует
-                $null = Get-DirectoryOrCreate $ResultDirFullPath ( Get-ThumbnailDir ) 
-
-                $OutputFileName = Join-Path $ResultPath $_.Path $_.FileName
-                Convert-ScanOrRename $_.FullName $OutputFileName
-            }
-
-    }
-
-
-# Обработка подпапок
-foreach ($SourceDirName in Get-ChildItem $FullSourcePath -Name) {
-    # Полный путь к папке с результатами обработки
-    # Создаем папку, если еще не существует
-    $ResultDir = Get-DirectoryOrCreate $ResultPath $SourceDirName
-
-    # Структура файлов и метаданные для чертежей в папке в виде JSON
-    $ResultDirIndex = Read-DirectoryToJson $ResultDir
-
-    # Сохраним оригинальное имя папки в метаданных
-    if ($null -eq $ResultDirIndex.OriginalName) {
-        $ResultDirIndex.OriginalName = $SourceDirName
-    }
-
-    $SourceDirFullPath = Get-FullPathString $SourcePath $SourceDirName
-    $ResultDirFullPath = Get-FullPathString $ResultPath $ResultDir
-
-    # Путь к папка с миниатюрами, на всякий случай
-    # Создадим, если не существует
-    $null = Get-DirectoryOrCreate $ResultDirFullPath ( Get-ThumbnailDir ) 
-
-    # Обработаем отсканированные исходники в текущей папке
-    Get-ChildItem $SourceDirFullPath | ForEach-Object -Process {
-        # Имя файла скана латиницей
-        $TranslitFileName = (ConvertTo-Translit $_.BaseName) + '.tif'; 
-
-        # Полный путь файла для результата обработки
-        $OutputFileName = Get-FullPathString $ResultDirFullPath $TranslitFileName
-
-        # Контрольная сумма скана
-        # Испльзуем ее как ключ в списке файлов (индексе)
-        $MD5sum = (Get-FileHash $_.FullName MD5).Hash
-
-        # если файла нет в индексе, то обработаем его
-        if ($null -eq $ResultDirIndex.Files.$MD5sum) {
-       
-            Convert-ScanOrRename $_ $OutputFileName
-
-            # Проверим, если есть уже сконвертированные файлы
-            $NewFileData = [PSCustomObject]@{
-                ResultFileName = $TranslitFileName
-                PngFile        = Convert-WebPngOrRename $OutputFileName
-                OriginalName   = $_.Name
-                Tags           = Get-TagsFromName $_.BaseName
-                Year           = Get-YearFromFilename $_.BaseName
-                Description    = $null
-                Thumbnails     = Get-Thumbnails $OutputFileName
-            }
-
-            $ResultDirIndex.Files | Add-Member -MemberType NoteProperty -Name $MD5sum -Value $NewFileData
-        }
-        else {
-            # Файл уже существует
-            $ExistedFileData = $ResultDirIndex.Files.$MD5sum
-
-            if ($ExistedFileData.OriginalName -cne $_.Name) {
-
-                $OldFileName = Get-FullPathString $ResultDirFullPath $ExistedFileData.ResultFileName
-
-                # Изменилось имя файла?
-                # * Новое имя => транслитерация + скопировать старые обработанные файлы 
-                # * Новые теги
-                # * Обновить данные в структуре
-                Convert-ScanOrRename $_ $OutputFileName $OldFileName 
-                $WebPngFile = Convert-WebPngOrRename $OutputFileName (Get-FullPathString $ResultDirFullPath $ExistedFileData.PngFile)
-
-                $UpdatedFileData = [PSCustomObject]@{
-                    ResultFileName = $TranslitFileName
-                    PngFile        = $WebPngFile
-                    OriginalName   = $_.Name
-                    Tags           = Get-TagsFromName $_.BaseName
-                    Year           = Get-YearFromFilename $_.BaseName
-                    Description    = $null
-                    Thumbnails     = Get-Thumbnails $OutputFileName $OldFileName
+        <#
+            $CurrentDirIndex - это объект, который содержит метаданные папки
+            в виде JSON, например:
+            {
+                "Directory": <Имя папки в транслитерации>,
+                "OriginalName": <Оригинальное имя папки>,
+                "Description": <Описание папки (не используется)>,
+                "Files": { 
+                    "<hash-code>": {
+                        "ResultFileName": <имя скана в транслитерации>.tif,
+                        "PngFile": <то же, но в другом формате>.png,
+                        "OriginalName": <оригинал скана чертежа>.pdf,
+                        "Tags": [
+                            "tag-1",
+                            "tag-2"
+                        ],
+                        "Year": "2020",
+                        "Description": <дополнительное описание чертежа (не используется)>,
+                        "Thumbnails": {
+                            "400": "thumbnail-400.png"
+                        }
+                    }
                 }
+        #>  
+        $CurrentDirIndex = $_
+        # Обработаем файлы сканов в текущей папке
+        Get-ChildItem (Join-Path $FullSourcePath $CurrentDirIndex.OriginalName) -Name | 
+            ForEach-Object -Process {
+                # Контрольная сумма скана
+                # Испльзуем ее как ключ в списке файлов (индексе)
+                $MD5sum = (Get-FileHash $_.FullName MD5).Hash
+                $MaybeFileData = $CurrentDirIndex.Files.$MD5sum
 
-                $ResultDirIndex.Files | Add-Member -MemberType NoteProperty -Name $MD5sum -Value $UpdatedFileData -Force
+                $FileData = Convert-FileAndCreateData $_ $MaybeFileData $ResultPath
+
+                $CurrentDirIndex.Files | Add-Member -MemberType NoteProperty -Name $MD5sum -Value $FileData
             }
-        }
+            
+        $JsonIndexFile = Join-Path (Join-Path $ResultPath $CurrentDirIndex.Directory) ($CurrentDirIndex.Directory + ".json")
+        $CurrentDirIndex | ConvertTo-Json -depth 10 | Set-Content -Path $JsonIndexFile -Force
     }
-
-    $JsonIndexFile = Get-FullPathString (Get-FullPathString $ResultPath $ResultDir) ($ResultDir + ".json")
-    $ResultDirIndex | ConvertTo-Json -depth 10 | Set-Content -Path $JsonIndexFile -Force
-}
