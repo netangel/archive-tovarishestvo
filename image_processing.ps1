@@ -17,7 +17,7 @@ Import-Module (Join-Path $PSScriptRoot "libs/JsonHelper.psm1")
 # Проверим, если пути указанные в параметрах запуска существуют
 # Если нет, то выходим с ошибкой
 # В противном случае вернем полные пути
-($FullSourcePath, $FullResultPath) = Test-RequiredPathsAndReturn $SourcePath $ResultPath
+($FullSourcePath, $FullResultPath) = Test-RequiredPathsAndReturn $SourcePath $ResultPath $PSScriptRoot
 
 # Обработка корневой папки, для каждой папки внутри прочитаем индекс
 # или создадим новый, если папка обрабатывается впервые
