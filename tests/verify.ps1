@@ -1,5 +1,5 @@
-﻿Import-Module ..\tools\ConvertText.psm1
-Import-Module ..\tools\ConvertImage.psm1
+﻿Import-Module ..\libs\ConvertText.psm1
+Import-Module ..\libs\ConvertImage.psm1
 
 $SettingsObject = Get-Content -Path ..\settings.json | ConvertFrom-Json
 
