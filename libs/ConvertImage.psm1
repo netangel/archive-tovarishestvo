@@ -55,8 +55,6 @@ function Convert-PdfToTiff {
             # original pdf has 300dpi
             Optimize-Tiff $OutputTiffFile, $OutputTiffFileName
         }
-
-        # return Get-Item $OutputTiffFileName
     }
 }
 
@@ -73,7 +71,7 @@ function Optimize-Tiff {
     & $cmd convert $InputTiffFile.FullName -colorspace Gray -quality 100 -resize 50% $OutputTiffFileName
 }
 
-function New-ThumbnailOrCopy {
+function New-Thumbnail {
     param (
         [string]$InputFileName,
         [int]$Pixels
@@ -97,7 +95,7 @@ function  Convert-WebPngOrRename {
     )
 
     if (-not (Test-Path $InputFileName)) {
-        throw "Исходный файл не найден"
+        throw "Исходный файл не найден $InputFileName"
     }
 
     $WebPngFile = $InputFileName.Replace('.tif', '.png')
@@ -112,4 +110,4 @@ function  Convert-WebPngOrRename {
     return $WebPngFile
 }
 
-Export-ModuleMember -Function Convert-PdfToTiff, Optimize-Tiff, New-ThumbnailOrCopy, Convert-WebPngOrRename
+Export-ModuleMember -Function Convert-PdfToTiff, Optimize-Tiff, New-Thumbnail, Convert-WebPngOrRename

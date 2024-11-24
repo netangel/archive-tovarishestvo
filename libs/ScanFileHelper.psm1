@@ -1,6 +1,6 @@
 function Convert-FileAndCreateData {
     param (
-        [System.IO.File]$SourceFile,
+        [System.IO.FileInfo]$SourceFile,
         [PSCustomObject]$MaybeFileData,
         [string]$ResultDirFullPath
     )
@@ -19,7 +19,7 @@ function Convert-FileAndCreateData {
     # Полный путь к файлу для результата обработки
     $OutputFileName = Join-Path $ResultDirFullPath $TranslitFileName
     # Полный путь старому обработанному файлу, если у нас есть метаданные 
-    $OldFilePath = ($null -ne $MaybeFileData) ? (Join-Path $ResultDirFullPath $MaybeFileData.OriginalName) : $null
+    $OldFilePath = ($null -ne $MaybeFileData) ? (Join-Path $ResultDirFullPath $MaybeFileData.ResultFileName) : $null
 
     # Если файл уже обработан, то просто переименуем его
     # и удалим старый файл, старый png и старые превью
@@ -44,28 +44,30 @@ function Convert-FileAndCreateData {
 
     # Обработаем файл
     if ( -not (Test-Path ($OutputFileName)) ) {
-        switch ($_.Extension) {
-            ".pdf" { Convert-PdfToTiff -InputPdfFile  $InputFile -OutputTiffFileName $OutputFileName }
-            ".tif" { Optimize-Tiff     -InputTiffFile $InputFile -OutputTiffFileName $OutputFileName } 
+        switch ($SourceFile.Extension) {
+            ".pdf" { Convert-PdfToTiff -InputPdfFile  $SourceFile -OutputTiffFileName $OutputFileName }
+            ".tif" { Optimize-Tiff     -InputTiffFile $SourceFile -OutputTiffFileName $OutputFileName } 
             Default { <# do nothing #> }
         }
-    } 
+    }
+
+    $pngFile = ($null -ne $MaybeFileData) ? $WebPngFile : (Convert-WebPngOrRename -InputFileName $OutputFileName)
 
     # Вернем метаданные 
     return [PSCustomObject]@{
         ResultFileName = $TranslitFileName
         OriginalName   = $SourceFile.Name
-        PngFile        = ($null -ne $MaybeFileData) ? $WebPngFile : (Convert-WebPngOrRename $OutputFileName)
+        PngFile        = $pngFile
         Tags           = Get-TagsFromName $SourceFile.BaseName
         Year           = Get-YearFromFilename $SourceFile.BaseName
-        Thumbnails     = Get-Thumbnails $TranslitFileName
+        Thumbnails     = Get-Thumbnails $OutputFileName
     }
 
     
 }
 function Get-Thumbnails([string]$FileName) {
     [PSCustomObject]@{
-        400 = ( New-ThumbnailOrCopy $FileName 400 )
+        400 = ( New-Thumbnail -InputFileName $FileName -Pixels 400 )
     }
 }
 

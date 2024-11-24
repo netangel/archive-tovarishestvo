@@ -1,4 +1,4 @@
-$ThumbnailDir = "Thumbnails"
+$ThumbnailDir = "thumbnails"
 
 function Get-FullPathString([string] $FirstPart, [string] $SecondPart) {
     Join-Path $FirstPart $SecondPart
@@ -57,7 +57,7 @@ function Get-ThumbnailFileName
         [int]$Pixels
     )
 
-    if (-not $SourceFileName.EndsWith('.tiff')) {
+    if (-not ($SourceFileName -match '\.(tif|png)$')) {
         return $null
     }
 

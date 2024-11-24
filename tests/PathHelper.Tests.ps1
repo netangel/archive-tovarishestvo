@@ -61,12 +61,22 @@ Describe 'File name => year(s)' {
 
 Describe 'File name => Thumbnail file name' {
     It 'File name with path' {
-        Get-ThumbnailFileName '../test/filename.tiff' 500 
-            | Should -Be ('../test/Thumbnails/filename_500.png')
+        Get-ThumbnailFileName 'Testdrive:/test/filename.tif' 500 
+            | Should -Be 'Testdrive:/test/thumbnails/filename_500.png'
     }
     
     It 'Just file name' {
-        Get-ThumbnailFileName 'filename.tiff' 500 
-            | Should -Be ('Thumbnails/filename_500.png')
+        Get-ThumbnailFileName 'filename.tif' 500 
+            | Should -Be 'thumbnails/filename_500.png'
+    }
+    
+    It 'File name with path' {
+        Get-ThumbnailFileName 'Testdrive:/test/filename.png' 500 
+            | Should -Be 'Testdrive:/test/thumbnails/filename_500.png'
+    }
+    
+    It 'Just file name' {
+        Get-ThumbnailFileName 'filename.png' 500 
+            | Should -Be 'thumbnails/filename_500.png'
     }
 }
