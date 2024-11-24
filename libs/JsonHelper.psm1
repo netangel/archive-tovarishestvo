@@ -3,18 +3,31 @@
 #   Если json для папки еще не создан (= папка обрабатывается впервые), 
 #   возвращаем пустую структуру данных 
 #
-function Read-DirectoryToJson([string] $DirName, [string] $ResultPath, [string] $SourceDirName) {
-    $JsonIndexFile = Join-Path (Join-Path $ResultPath $DirName) ($DirName + ".json")
+function Read-DirectoryToJson {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
+        [string] $DirName,
+        
+        [Parameter(Mandatory)]
+        [string] $ResultPath,
+        
+        [string] $SourceDirName
+    )
     
-    if ((Test-Path $JsonIndexFile) -and (Test-Json -Path $JsonIndexFile)) {
-        return Get-Content -Path $JsonIndexFile | ConvertFrom-Json
-    }
-    
-    [PSCustomObject]@{
-        Directory    = $DirName
-        OriginalName = $SourceDirName
-        Description  = $null
-        Files        = [PSCustomObject]@{}
+    process {
+        $JsonIndexFile = Join-Path (Join-Path $ResultPath $DirName) ($DirName + ".json")
+        
+        if ((Test-Path $JsonIndexFile) -and (Test-Json -Path $JsonIndexFile)) {
+            return Get-Content -Path $JsonIndexFile | ConvertFrom-Json
+        }
+        
+        [PSCustomObject]@{
+            Directory    = $DirName
+            OriginalName = $SourceDirName
+            Description  = $null
+            Files        = [PSCustomObject]@{}
+        }
     }
 }
 

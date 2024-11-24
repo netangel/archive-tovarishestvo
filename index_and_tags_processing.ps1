@@ -7,14 +7,18 @@ Param(
     $ResultPath
 )
 
-if (-Not (Test-Path $ResultPath)) {
-    throw "Папка для результатов ($ResultPath) не найдена!"
+Import-Module (Join-Path $PSScriptRoot "libs/JsonHelper.psm1")
+Import-Module (Join-Path $PSScriptRoot "libs/PathHelper.psm1")
+
+# Дополним путь к папке с результатами, если он не абсолютный
+if (-not [System.IO.Path]::IsPathRooted($ResultPath)) {
+    $ResultPath = Join-Path $PSScriptRoot $ResultPath
 }
 
-Import-Module ./tools/JsonHelper.psm1
-Import-Module ./tools/PathHelper.psm1
-
-$ResultPath = Get-FullPathString $PSScriptRoot $ResultPath
+# Проверим, если папка с результатами существует
+if (-not (Test-Path $ResultPath)) {
+    throw "Папка для результатов ($ResultPath) не найдена!"
+}
 
 $ResultIndexJSON = [PSCustomObject]@{
     Directories = [System.Collections.ArrayList]@()
@@ -25,43 +29,51 @@ $ResultTagsJSON = [PSCustomObject]@{}
 function Get-FileDataForTag([PSCustomObject]$FileData, [string]$Directory) {
     [PSCustomObject]@{
         OrigName  = $FileData.OriginalName
-        Thumbnail = Get-FullPathString $Directory ( Get-FullPathString ( Get-ThumbnailDir ) $FileData.Thumbnails.400 )
-        PngFile   = Get-FullPathString $Directory $FileData.PngFile
-        TifFile   = Get-FullPathString $Directory $FileData.ResultFileName 
+        Thumbnail = Join-Path $Directory ( Join-Path ( Get-ThumbnailDir ) $FileData.Thumbnails.400 )
+        PngFile   = Join-Path $Directory $FileData.PngFile
+        TifFile   = Join-Path $Directory $FileData.ResultFileName 
     }   
 }
 
-# Обработка под-папок
-foreach ($ResultDirName in Get-ChildItem $ResultPath -Directory -Name) {
-    $DirJSON = Read-DirectoryToJson $ResultDirName
-    $FilesCount = $DirJSON.Files | Get-Member -MemberType NoteProperty | Measure-Object
+# Обработка подпапок
+Get-ChildItem $ResultPath -Name | 
+    Read-DirectoryToJson -ResultPath $ResultPath |
+    ForEach-Object -Process {
+        $CurrentDirIndex = $_
 
-    if ($FilesCount.Count -eq 0) {
-        throw "Список файлов в папке пустой!"
-    }
+        # Общее число сканов в папке
+        $FilesCount = $CurrentDirIndex.Files 
+            | Get-Member -MemberType NoteProperty 
+            | Select-Object -ExpandProperty Count
 
-    $ResultIndexJSON.Directories.Add([PSCustomObject]@{
-            OrigName   = $DirJSON.OriginalName 
-            PathName   = $DirJSON.Directory
-            FilesCount = $FilesCount.Count
-        })
-    
-    $DirJSON.Files | Get-Member -MemberType NoteProperty | ForEach-Object {
-        $FileId = $_.Name
-        $FileData = $DirJSON.Files.$FileId
-
-        $FileData.Tags | ForEach-Object {
-            # Есть тега нет списке, добавим его как ключ
-            if ($ResultTagsJSON.$_ -eq $null) {
-                $ResultTagsJSON | Add-Member -MemberType NoteProperty -Name $_ -Value ( [System.Collections.ArrayList]@() )
-            }
-            $ResultTagsJSON.$_.Add( (Get-FileDataForTag $FileData $DirJSON.Directory) )
+        if ($FilesCount -eq 0) {
+            Write-Error "Список файлов в папке пустой!"
         }
-    }
-}
 
-$JsonIndexFile = Get-FullPathString $ResultPath "index.json"
+        $ResultIndexJSON.Directories.Add([PSCustomObject]@{
+            OrigName   = $CurrentDirIndex.OriginalName 
+            PathName   = $CurrentDirIndex.Directory
+            FilesCount = $FilesCount
+        })
+       
+        $CurrentDirIndex.Files | Get-Member -MemberType NoteProperty | 
+        ForEach-Object -Process {
+            $FileId = $_.Name
+            $FileData = $CurrentDirIndex.Files.$FileId
+    
+            $FileData.Tags | ForEach-Object {
+                # Есть тега нет списке, добавим его как ключ
+                if ($ResultTagsJSON.$_ -eq $null) {
+                    $ResultTagsJSON | Add-Member -MemberType NoteProperty -Name $_ -Value ( [System.Collections.ArrayList]@() )
+                }
+                $ResultTagsJSON.$_.Add( (Get-FileDataForTag $FileData $CurrentDirIndex.Directory) )
+            }
+        } 
+    }
+
+# Сохраним индексы в JSON файлы
+$JsonIndexFile = Join-Path $ResultPath "index.json"
 $ResultIndexJSON | ConvertTo-Json -depth 10 | Set-Content -Path $JsonIndexFile -Force
     
-$JsonTagsFile = Get-FullPathString $ResultPath "tags.json"
+$JsonTagsFile = Join-Path $ResultPath "tags.json"
 $ResultTagsJSON | ConvertTo-Json -depth 10 | Set-Content -Path $JsonTagsFile -Force
