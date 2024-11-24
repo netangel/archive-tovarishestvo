@@ -21,6 +21,9 @@ function Read-DirectoryToJson {
         if ((Test-Path $JsonIndexFile) -and (Test-Json -Path $JsonIndexFile)) {
             return Get-Content -Path $JsonIndexFile | ConvertFrom-Json
         }
+        elseif ($null -eq $SourceDirName -or $SourceDirName -eq "") {
+            return $null
+        }
         
         [PSCustomObject]@{
             Directory    = $DirName

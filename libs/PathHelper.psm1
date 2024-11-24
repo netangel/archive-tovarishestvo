@@ -83,8 +83,8 @@ function Test-RequiredPathsAndReturn {
         [string]$ScriptRoot = $PSScriptRoot 
     )
     
-    $FullSourcePath = ( Test-IsFullPath $SourcePath ) ? $SourcePath : (Get-FullPathString $ScriptRoot $SourcePath)
-    $FullResultPath = ( Test-IsFullPath $ResultPath ) ? $ResultPath : (Get-FullPathString $ScriptRoot $ResultPath)
+    $FullSourcePath = ( Test-IsFullPath $SourcePath ) ? $SourcePath : (Join-Path $ScriptRoot $SourcePath)
+    $FullResultPath = ( Test-IsFullPath $ResultPath ) ? $ResultPath : (Join-Path $ScriptRoot $ResultPath)
 
     if (-Not (Test-Path $FullSourcePath)) {
         throw "Папка с оригиналами ($FullSourcePath) не найдена!"

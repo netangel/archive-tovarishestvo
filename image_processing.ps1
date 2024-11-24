@@ -9,10 +9,10 @@ Param(
     [string] $ResultPath
 )
 
-Import-Module (Join-Path $PSScriptRoot "libs/ConvertText.psm1")
-Import-Module (Join-Path $PSScriptRoot "libs/PathHelper.psm1")
-Import-Module (Join-Path $PSScriptRoot "libs/ConvertImage.psm1")
-Import-Module (Join-Path $PSScriptRoot "libs/JsonHelper.psm1")
+Import-Module (Join-Path $PSScriptRoot "libs/ConvertText.psm1")  -Force
+Import-Module (Join-Path $PSScriptRoot "libs/PathHelper.psm1")   -Force
+Import-Module (Join-Path $PSScriptRoot "libs/ConvertImage.psm1") -Force
+Import-Module (Join-Path $PSScriptRoot "libs/JsonHelper.psm1")   -Force
 
 # Проверим, если пути указанные в параметрах запуска существуют
 # Если нет, то выходим с ошибкой
@@ -22,7 +22,7 @@ Import-Module (Join-Path $PSScriptRoot "libs/JsonHelper.psm1")
 # Обработка корневой папки, для каждой папки внутри прочитаем индекс
 # или создадим новый, если папка обрабатывается впервые
 Get-ChildItem $FullSourcePath -Name | 
-    Get-DirectoryPathAndIndex -ResultPath $ResultPath |
+    Get-SubDirectoryIndex -ResultPath $FullResultPath |
     ForEach-Object -Process {
         <#
             $CurrentDirIndex - это объект, который содержит метаданные папки
@@ -49,8 +49,9 @@ Get-ChildItem $FullSourcePath -Name |
                 }
         #>  
         $CurrentDirIndex = $_
+        $FullCurrentDirPath = Join-Path $FullResultPath $CurrentDirIndex.Directory
         # Обработаем файлы сканов в текущей папке
-        Get-ChildItem (Join-Path $FullSourcePath $CurrentDirIndex.OriginalName) -Name | 
+        Get-ChildItem (Join-Path $FullSourcePath $CurrentDirIndex.OriginalName) | 
             ForEach-Object -Process {
                 # Контрольная сумма скана
                 # Испoльзуем ее как ключ в списке файлов (индексе)
@@ -58,13 +59,13 @@ Get-ChildItem $FullSourcePath -Name |
                 $MaybeFileData = $CurrentDirIndex.Files.$MD5sum
 
                 # Обработаем файл и вернем метаданные
-                $FileData = Convert-FileAndCreateData $_ $MaybeFileData $ResultPath
+                $FileData = Convert-FileAndCreateData $_ $MaybeFileData $FullCurrentDirPath
 
                 # Добавим метаданные в индекс
                 $CurrentDirIndex.Files | Add-Member -MemberType NoteProperty -Name $MD5sum -Value $FileData
             }
         
         # Сохраним индекс в JSON файл в папке с результатами
-        $JsonIndexFile = Join-Path (Join-Path $ResultPath $CurrentDirIndex.Directory) ($CurrentDirIndex.Directory + ".json")
+        $JsonIndexFile = Join-Path $FullCurrentDirPath ($CurrentDirIndex.Directory + ".json")
         $CurrentDirIndex | ConvertTo-Json -depth 10 | Set-Content -Path $JsonIndexFile -Force
     }

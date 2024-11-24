@@ -7,8 +7,8 @@ Param(
     $ResultPath
 )
 
-Import-Module (Join-Path $PSScriptRoot "libs/JsonHelper.psm1")
-Import-Module (Join-Path $PSScriptRoot "libs/PathHelper.psm1")
+Import-Module (Join-Path $PSScriptRoot "libs/JsonHelper.psm1") -Force
+Import-Module (Join-Path $PSScriptRoot "libs/PathHelper.psm1") -Force
 
 # Дополним путь к папке с результатами, если он не абсолютный
 if (-not [System.IO.Path]::IsPathRooted($ResultPath)) {
@@ -38,19 +38,21 @@ function Get-FileDataForTag([PSCustomObject]$FileData, [string]$Directory) {
 # Обработка подпапок
 Get-ChildItem $ResultPath -Name | 
     Read-DirectoryToJson -ResultPath $ResultPath |
+    Where-Object { $_ -ne $null } |
     ForEach-Object -Process {
         $CurrentDirIndex = $_
 
         # Общее число сканов в папке
         $FilesCount = $CurrentDirIndex.Files 
             | Get-Member -MemberType NoteProperty 
+            | Measure-Object
             | Select-Object -ExpandProperty Count
 
         if ($FilesCount -eq 0) {
             Write-Error "Список файлов в папке пустой!"
         }
 
-        $ResultIndexJSON.Directories.Add([PSCustomObject]@{
+        $null = $ResultIndexJSON.Directories.Add([PSCustomObject]@{
             OrigName   = $CurrentDirIndex.OriginalName 
             PathName   = $CurrentDirIndex.Directory
             FilesCount = $FilesCount
@@ -66,7 +68,7 @@ Get-ChildItem $ResultPath -Name |
                 if ($ResultTagsJSON.$_ -eq $null) {
                     $ResultTagsJSON | Add-Member -MemberType NoteProperty -Name $_ -Value ( [System.Collections.ArrayList]@() )
                 }
-                $ResultTagsJSON.$_.Add( (Get-FileDataForTag $FileData $CurrentDirIndex.Directory) )
+                $null = $ResultTagsJSON.$_.Add( (Get-FileDataForTag $FileData $CurrentDirIndex.Directory) )
             }
         } 
     }
