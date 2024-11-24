@@ -153,8 +153,8 @@ Function ConvertTo-Translit {
             $Result += $c
         }
     }
-
-    return $Result
+    
+    return $Result -replace '[^\x20-\x7E]', ''
 }
 
 Export-ModuleMember -Function ConvertTo-Translit
