@@ -1,5 +1,5 @@
 BeforeAll {
-    . $PSScriptRoot/../libs/PathHelper.psm1
+    Import-Module $PSScriptRoot/../libs/PathHelper.psm1
 }
 
 Describe "Test-RequiredPathsAndReturn" {
@@ -46,7 +46,7 @@ Describe "Test-RequiredPathsAndReturn" {
     Context "When both paths exist" {
         It "Should return both paths" {
             # Act
-            $paths = Test-RequiredPathsAndReturn -SourcePath $testSourcePath -ResultPath $testResultPath
+            $paths = Test-RequiredPathsAndReturn -SourcePath $testSourcePath -ResultPath $testResultPath -ScriptRoot-ScriptRoot "TestDrive:"
             
             # Assert
             $paths[0] | Should -Not -BeNullOrEmpty
