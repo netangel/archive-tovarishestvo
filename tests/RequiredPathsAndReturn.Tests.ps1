@@ -5,8 +5,8 @@ BeforeAll {
 Describe "Test-RequiredPathsAndReturn" {
     BeforeEach {
         # Setup test directories in Pester's TestDrive
-        $testSourcePath = "TestDrive:\source"
-        $testResultPath = "TestDrive:\result"
+        $testSourcePath = Join-Path "TestDrive:" "source"
+        $testResultPath = Join-Path "TestDrive:" "result"
         New-Item -Path $testSourcePath -ItemType Directory -Force
         New-Item -Path $testResultPath -ItemType Directory -Force
     }

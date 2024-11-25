@@ -60,23 +60,27 @@ Describe 'File name => year(s)' {
 }
 
 Describe 'File name => Thumbnail file name' {
+    BeforeAll {
+        $RootDir = Join-Path "Testdrive:" "test"
+    }
+
     It 'File name with path' {
-        Get-ThumbnailFileName 'Testdrive:/test/filename.tif' 500 
-            | Should -Be 'Testdrive:/test/thumbnails/filename_500.png'
+        Get-ThumbnailFileName (Join-Path $RootDir "filename.tif") 500 
+            | Should -Be (Join-Path (Join-Path $RootDir "thumbnails" ) "filename_500.png")
     }
     
     It 'Just file name' {
         Get-ThumbnailFileName 'filename.tif' 500 
-            | Should -Be 'thumbnails/filename_500.png'
+            | Should -Be (Join-Path "thumbnails" "filename_500.png")
     }
     
     It 'File name with path' {
-        Get-ThumbnailFileName 'Testdrive:/test/filename.png' 500 
-            | Should -Be 'Testdrive:/test/thumbnails/filename_500.png'
+        Get-ThumbnailFileName (Join-Path $RootDir "filename.png") 500 
+            | Should -Be (Join-Path (Join-Path $RootDir "thumbnails" ) "filename_500.png")
     }
     
     It 'Just file name' {
         Get-ThumbnailFileName 'filename.png' 500 
-            | Should -Be 'thumbnails/filename_500.png'
+            | Should -Be (Join-Path "thumbnails" "filename_500.png")
     }
 }
