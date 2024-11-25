@@ -19,10 +19,12 @@ function Test-IsFullPath([string] $Path) {
         return $false
     }
     
-    if ($IsWindows) {
+    if ($Path -match '^TestDrive:') {
+        return $true
+    } elseif ($IsWindows) {
         return [System.IO.Path]::IsPathRooted($Path) -and $Path -match '^[A-Za-z]:\\'
     } else {
-        return $Path.StartsWith('/') -or $Path -match '^TestDrive:'
+        return $Path.StartsWith('/')
     }
 }
 

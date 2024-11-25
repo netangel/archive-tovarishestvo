@@ -1,12 +1,12 @@
 BeforeAll {
-    . $PSScriptRoot/../libs/PathHelper.psm1
+    Import-Module $PSScriptRoot/../libs/PathHelper.psm1
 }
 
 Describe "Test-RequiredPathsAndReturn" {
     BeforeEach {
         # Setup test directories in Pester's TestDrive
-        $testSourcePath = "TestDrive:\source"
-        $testResultPath = "TestDrive:\result"
+        $testSourcePath = Join-Path "TestDrive:" "source"
+        $testResultPath = Join-Path "TestDrive:" "result"
         New-Item -Path $testSourcePath -ItemType Directory -Force
         New-Item -Path $testResultPath -ItemType Directory -Force
     }
@@ -46,7 +46,7 @@ Describe "Test-RequiredPathsAndReturn" {
     Context "When both paths exist" {
         It "Should return both paths" {
             # Act
-            $paths = Test-RequiredPathsAndReturn -SourcePath $testSourcePath -ResultPath $testResultPath
+            $paths = Test-RequiredPathsAndReturn -SourcePath $testSourcePath -ResultPath $testResultPath 
             
             # Assert
             $paths[0] | Should -Not -BeNullOrEmpty
