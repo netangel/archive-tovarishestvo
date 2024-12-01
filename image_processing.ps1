@@ -19,9 +19,15 @@ Import-Module (Join-Path $PSScriptRoot "libs/JsonHelper.psm1")   -Force
 # В противном случае вернем полные пути
 ($FullSourcePath, $FullResultPath) = Test-RequiredPathsAndReturn $SourcePath $ResultPath $PSScriptRoot
 
+# Проверим, если папка с метаданными существует
+if (-not (Test-Path (Join-Path $FullResultPath $MetadataDir)))
+{
+    New-Item -Path $ResultPath -ItemType Directory -Name $MetadataDir | Out-Null
+}
+
 # Обработка корневой папки, для каждой папки внутри прочитаем индекс
 # или создадим новый, если папка обрабатывается впервые
-Get-ChildItem $FullSourcePath -Name | 
+Get-ChildItem $FullSourcePath -Name  | 
     Get-SubDirectoryIndex -ResultPath $FullResultPath |
     ForEach-Object -Process {
         <#
@@ -51,7 +57,7 @@ Get-ChildItem $FullSourcePath -Name |
         $CurrentDirIndex = $_
         $FullCurrentDirPath = Join-Path $FullResultPath $CurrentDirIndex.Directory
         # Обработаем файлы сканов в текущей папке
-        Get-ChildItem (Join-Path $FullSourcePath $CurrentDirIndex.OriginalName) | 
+        Get-ChildItem (Join-Path $FullSourcePath $CurrentDirIndex.OriginalName) -File | 
             ForEach-Object -Process {
                 # Контрольная сумма скана
                 # Испoльзуем ее как ключ в списке файлов (индексе)
@@ -62,10 +68,10 @@ Get-ChildItem $FullSourcePath -Name |
                 $FileData = Convert-FileAndCreateData $_ $MaybeFileData $FullCurrentDirPath
 
                 # Добавим метаданные в индекс
-                $CurrentDirIndex.Files | Add-Member -MemberType NoteProperty -Name $MD5sum -Value $FileData
+                $CurrentDirIndex.Files | Add-Member -MemberType NoteProperty -Name $MD5sum -Value $FileData -Force
             }
         
         # Сохраним индекс в JSON файл в папке с результатами
-        $JsonIndexFile = Join-Path $FullCurrentDirPath ($CurrentDirIndex.Directory + ".json")
+        $JsonIndexFile = Join-Path (Join-Path $FullResultPath $MetadataDir) ($CurrentDirIndex.Directory + ".json")
         $CurrentDirIndex | ConvertTo-Json -depth 10 | Set-Content -Path $JsonIndexFile -Force
     }

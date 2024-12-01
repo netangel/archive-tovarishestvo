@@ -8,13 +8,15 @@ Describe "Read-DirectoryToJson" {
     BeforeEach {
         $testDir = "TestDrive:\testdir"
         $resultPath = "TestDrive:\result"
+        $metadataPath = Join-Path $resultPath $MetadataDir
         New-Item -Path $testDir -ItemType Directory -Force
         New-Item -Path $resultPath -ItemType Directory -Force
+        New-Item -Path $metadataPath -ItemType Directory -Force
     }
 
     It "Creates new index when json doesn't exist" {
         # Act
-        $result = Read-DirectoryToJson -DirName "testdir" -ResultPath $resultPath -SourceDirName "original"
+        $result = Read-ResultDirectoryMetadata -DirName "testdir" -ResultPath $resultPath -SourceDirName "original"
 
         # Assert
         $result.Directory | Should -Be "testdir"
@@ -24,7 +26,7 @@ Describe "Read-DirectoryToJson" {
     
     It "Creates new index for cyrilic directory name when json doesn't exist" {
         # Act
-        $result = Read-DirectoryToJson -DirName "original" -ResultPath $resultPath -SourceDirName "оригинал"
+        $result = Read-ResultDirectoryMetadata -DirName "original" -ResultPath $resultPath -SourceDirName "оригинал"
 
         # Assert
         $result.Directory | Should -Be "original"
@@ -34,21 +36,21 @@ Describe "Read-DirectoryToJson" {
 
     It "Reads existing json file" {
         # Arrange
-        $jsonPath = Join-Path (Join-Path $resultPath "testdir") "testdir.json"
+        $jsonPath = Join-Path $metadataPath "testdir.json"
         $expected = @{
             Directory = "testdir"
             OriginalName = "original"
             Description = "test"
             Files = @{}
         } | ConvertTo-Json
-        New-Item -Path (Split-Path $jsonPath) -ItemType Directory -Force
         Set-Content -Path $jsonPath -Value $expected
 
         # Act
-        $result = Read-DirectoryToJson -DirName "testdir" -ResultPath $resultPath
+        $result = Read-ResultDirectoryMetadata -DirName "testdir" -ResultPath $resultPath
 
         # Assert
         $result.Directory | Should -Be "testdir"
+        $result.OriginalName | Should -Be "original"
         $result.Description | Should -Be "test"
     }
 }

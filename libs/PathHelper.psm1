@@ -1,4 +1,5 @@
 $ThumbnailDir = "thumbnails"
+$MetadataDir = "metadata"
 
 function Get-FullPathString([string] $FirstPart, [string] $SecondPart) {
     Join-Path $FirstPart $SecondPart
@@ -100,3 +101,5 @@ function Test-RequiredPathsAndReturn {
 
 Export-ModuleMember -Function Get-FullPathString, Get-DirectoryOrCreate, Get-TagsFromName, Get-YearFromFilename,
                                 Get-ThumbnailFileName, Get-ThumbnailDir, Test-RequiredPathsAndReturn
+
+Export-ModuleMember -Variable MetadataDir
