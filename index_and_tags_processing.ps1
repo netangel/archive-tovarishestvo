@@ -37,7 +37,7 @@ function Get-FileDataForTag([PSCustomObject]$FileData, [string]$Directory) {
 
 # Обработка подпапок
 Get-ChildItem $ResultPath -Name | 
-    Read-DirectoryToJson -ResultPath $ResultPath |
+    Read-ResultDirectoryMetadata -ResultPath $ResultPath |
     Where-Object { $_ -ne $null } |
     ForEach-Object -Process {
         $CurrentDirIndex = $_

@@ -19,6 +19,12 @@ Import-Module (Join-Path $PSScriptRoot "libs/JsonHelper.psm1")   -Force
 # В противном случае вернем полные пути
 ($FullSourcePath, $FullResultPath) = Test-RequiredPathsAndReturn $SourcePath $ResultPath $PSScriptRoot
 
+# Проверим, если папка с метаданными существует
+if (-not (Test-Path (Join-Path $FullResultPath $MetadataDir)))
+{
+    New-Item -Path $ResultPath -ItemType Directory -Name $MetadataDir | Out-Null
+}
+
 # Обработка корневой папки, для каждой папки внутри прочитаем индекс
 # или создадим новый, если папка обрабатывается впервые
 Get-ChildItem $FullSourcePath -Name | 
@@ -66,6 +72,6 @@ Get-ChildItem $FullSourcePath -Name |
             }
         
         # Сохраним индекс в JSON файл в папке с результатами
-        $JsonIndexFile = Join-Path $FullCurrentDirPath ($CurrentDirIndex.Directory + ".json")
+        $JsonIndexFile = Join-Path (Join-Path $FullResultPath $MetadataDir) ($CurrentDirIndex.Directory + ".json")
         $CurrentDirIndex | ConvertTo-Json -depth 10 | Set-Content -Path $JsonIndexFile -Force
     }

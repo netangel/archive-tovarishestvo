@@ -3,7 +3,7 @@
 #   Если json для папки еще не создан (= папка обрабатывается впервые), 
 #   возвращаем пустую структуру данных 
 #
-function Read-DirectoryToJson {
+function Read-ResultDirectoryMetadata {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
@@ -16,7 +16,7 @@ function Read-DirectoryToJson {
     )
     
     process {
-        $JsonIndexFile = Join-Path (Join-Path $ResultPath $DirName) ($DirName + ".json")
+        $JsonIndexFile = Join-Path (Join-Path $ResultPath $MetadataDir) ($DirName + ".json")
         
         if ((Test-Path $JsonIndexFile) -and (Test-Json -Path $JsonIndexFile)) {
             return Get-Content -Path $JsonIndexFile | ConvertFrom-Json
@@ -52,10 +52,10 @@ function Get-SubDirectoryIndex {
            
             # Путь к папка с миниатюрами, на всякий случай
             # Создадим, если не существует
-            $null = Get-DirectoryOrCreate (Join-Path $ResultPath $ResultDir) ( Get-ThumbnailDir )  
+            $null = Get-DirectoryOrCreate (Join-Path $ResultPath $ResultDir) ( Get-ThumbnailDir ) 
             
             # Get JSON index and return object
-            Read-DirectoryToJson $ResultDir $ResultPath $SourceDirName
+            Read-ResultDirectoryMetadata $ResultDir $ResultPath $SourceDirName
         }
         catch {
             Write-Error "Failed to process directory $SourceDirName`: $_"
@@ -64,4 +64,4 @@ function Get-SubDirectoryIndex {
     }
 }
 
-Export-ModuleMember -Function Read-DirectoryToJson, Get-SubDirectoryIndex
+Export-ModuleMember -Function Read-ResultDirectoryMetadata, Get-SubDirectoryIndex
