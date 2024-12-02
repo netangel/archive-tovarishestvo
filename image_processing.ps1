@@ -13,11 +13,15 @@ Import-Module (Join-Path $PSScriptRoot "libs/ConvertText.psm1")  -Force
 Import-Module (Join-Path $PSScriptRoot "libs/PathHelper.psm1")   -Force
 Import-Module (Join-Path $PSScriptRoot "libs/ConvertImage.psm1") -Force
 Import-Module (Join-Path $PSScriptRoot "libs/JsonHelper.psm1")   -Force
+Import-Module (Join-Path $PSScriptRoot "libs/ToolsHelper.psm1")  -Force
 
 # Проверим, если пути указанные в параметрах запуска существуют
 # Если нет, то выходим с ошибкой
 # В противном случае вернем полные пути
 ($FullSourcePath, $FullResultPath) = Test-RequiredPathsAndReturn $SourcePath $ResultPath $PSScriptRoot
+
+# Проверим, если установлены необходимые инструменты
+Test-RequiredTools
 
 # Проверим, если папка с метаданными существует
 if (-not (Test-Path (Join-Path $FullResultPath $MetadataDir)))

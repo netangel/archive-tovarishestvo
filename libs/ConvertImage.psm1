@@ -1,32 +1,7 @@
 ﻿$GhostScriptTool= '..\..\tools\ghostscript\bin\gswin64c.exe'
 $ImageMagickTool = '..\..\tools\imagemagic\magick.exe'
 
-function Get-PDFConvereter {
-    if (Test-Path $GhostScriptTool) {
-        return $GhostScriptTool
-    }
-    elseif (Get-Command "gsc" -ErrorAction SilentlyContinue) {
-        Write-Error "No tool gswin64.exe"
-        return "gsc"
-    }
-    else {
-        throw "Не могу найти конвертор PDF -> TIFF"
-    }
-}
 
-function Get-ImageMagickTool {
-    if (Test-Path $ImageMagickTool) {
-        return $ImageMagickTool
-    }
-    elseif (Get-Command "magick" -ErrorAction SilentlyContinue) {
-        Write-Error "No tools magic.exe" 
-        return "magick"
-    }
-    else {
-        throw "Не могу найти конвертор картинок"
-    }
-
-}
 
 function Convert-PdfToTiff {
     Param(
