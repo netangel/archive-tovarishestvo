@@ -13,11 +13,19 @@ Import-Module (Join-Path $PSScriptRoot "libs/ConvertText.psm1")  -Force
 Import-Module (Join-Path $PSScriptRoot "libs/PathHelper.psm1")   -Force
 Import-Module (Join-Path $PSScriptRoot "libs/ConvertImage.psm1") -Force
 Import-Module (Join-Path $PSScriptRoot "libs/JsonHelper.psm1")   -Force
+Import-Module (Join-Path $PSScriptRoot "libs/ToolsHelper.psm1")  -Force
+Import-Module (Join-Path $PSScriptRoot "libs/ScanFileHelper.psm1")  -Force
 
 # Проверим, если пути указанные в параметрах запуска существуют
 # Если нет, то выходим с ошибкой
 # В противном случае вернем полные пути
 ($FullSourcePath, $FullResultPath) = Test-RequiredPathsAndReturn $SourcePath $ResultPath $PSScriptRoot
+
+# Проверим, если установлены необходимые инструменты
+if (-not (Test-RequiredTools)) {
+    Write-Warning "Необходимые инструменты не установлены. Скрипт завершает работу."
+    exit
+}
 
 # Проверим, если папка с метаданными существует
 if (-not (Test-Path (Join-Path $FullResultPath $MetadataDir)))
@@ -56,6 +64,9 @@ Get-ChildItem $FullSourcePath -Name  |
         #>  
         $CurrentDirIndex = $_
         $FullCurrentDirPath = Join-Path $FullResultPath $CurrentDirIndex.Directory
+
+        Write-Verbose "Обработка папки: $($CurrentDirIndex.OriginalName)"
+
         # Обработаем файлы сканов в текущей папке
         Get-ChildItem (Join-Path $FullSourcePath $CurrentDirIndex.OriginalName) -File | 
             ForEach-Object -Process {
@@ -64,6 +75,8 @@ Get-ChildItem $FullSourcePath -Name  |
                 $MD5sum = (Get-FileHash $_.FullName MD5).Hash
                 $MaybeFileData = $CurrentDirIndex.Files.$MD5sum
 
+                Write-Verbose "Обработка оригинала чертежа: $($_.FullName)"
+                
                 # Обработаем файл и вернем метаданные
                 $FileData = Convert-FileAndCreateData $_ $MaybeFileData $FullCurrentDirPath
 

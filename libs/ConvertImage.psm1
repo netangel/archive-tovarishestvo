@@ -1,34 +1,4 @@
-﻿$GhostScriptTool= '..\..\tools\ghostscript\bin\gswin64c.exe'
-$ImageMagickTool = '..\..\tools\imagemagic\magick.exe'
-
-function Get-PDFConvereter {
-    if (Test-Path $GhostScriptTool) {
-        return $GhostScriptTool
-    }
-    elseif (Get-Command "gsc" -ErrorAction SilentlyContinue) {
-        Write-Error "No tool gswin64.exe"
-        return "gsc"
-    }
-    else {
-        throw "Не могу найти конвертор PDF -> TIFF"
-    }
-}
-
-function Get-ImageMagickTool {
-    if (Test-Path $ImageMagickTool) {
-        return $ImageMagickTool
-    }
-    elseif (Get-Command "magick" -ErrorAction SilentlyContinue) {
-        Write-Error "No tools magic.exe" 
-        return "magick"
-    }
-    else {
-        throw "Не могу найти конвертор картинок"
-    }
-
-}
-
-function Convert-PdfToTiff {
+﻿function Convert-PdfToTiff {
     Param(
         # Input file object
         [Parameter(ValueFromPipelineByPropertyName)] 
@@ -41,8 +11,8 @@ function Convert-PdfToTiff {
 
     process {
         $InputFileName = $InputPdfFile.FullName
-        $cmd = Get-PDFConvereter
-        & $cmd -dNOPAUSE -sDEVICE=tiffgray ("-sOutputFile=" + $OutputTiffFileName) -q -r300 $InputFileName -c quit
+        $gs = Get-ToolCommand -Tool GhostScript
+        & $gs -dNOPAUSE -sDEVICE=tiffgray ("-sOutputFile=" + $OutputTiffFileName) -q -r300 $InputFileName -c quit
 
         $OutputTiffFile = Get-Item $OutputTiffFileName -ErrorAction SilentlyContinue
 
@@ -67,8 +37,8 @@ function Optimize-Tiff {
         [string] $OutputTiffFileName
     )
 
-    $cmd = Get-ImageMagickTool 
-    & $cmd convert $InputTiffFile.FullName -colorspace Gray -quality 100 -resize 50% $OutputTiffFileName
+    $magick = Get-ToolCommand -Tool ImageMagick
+    & $magick $InputTiffFile.FullName -colorspace Gray -quality 100 -resize 50% $OutputTiffFileName
 }
 
 function New-Thumbnail {
@@ -79,8 +49,8 @@ function New-Thumbnail {
 
     $ThumbnailFile = Get-ThumbnailFileName $InputFileName $Pixels
 
-    $cmd = Get-ImageMagickTool
-    & $cmd $InputFileName -thumbnail "${Pixels}x${Pixels}" -strip -quality 95 $ThumbnailFile
+    $magick = Get-ToolCommand -Tool ImageMagick
+    & $magick $InputFileName -thumbnail "${Pixels}x${Pixels}" -strip -quality 95 $ThumbnailFile
     
     if ($ThumbnailFile -match "^.*[\/\\](?<filename>.*?)$") {
         return $Matches.filename
@@ -100,8 +70,8 @@ function  Convert-WebPngOrRename {
 
     $WebPngFile = $InputFileName.Replace('.tif', '.png')
    
-    $cmd = Get-ImageMagickTool 
-    & $cmd convert $InputFileName -quality 100 $WebPngFile
+    $magick = Get-ToolCommand -Tool ImageMagick 
+    & $magick $InputFileName -quality 100 $WebPngFile
     
     if ($WebPngFile -match "^.*[\/\\](?<filename>.*?)$") {
         return $Matches.filename
