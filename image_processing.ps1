@@ -68,7 +68,8 @@ Get-ChildItem $FullSourcePath -Name  |
         Write-Verbose "Обработка папки: $($CurrentDirIndex.OriginalName)"
 
         # Обработаем файлы сканов в текущей папке
-        Get-ChildItem (Join-Path $FullSourcePath $CurrentDirIndex.OriginalName) -File | 
+        Get-ChildItem (Join-Path $FullSourcePath $CurrentDirIndex.OriginalName) -File |
+            Where-Object { $_.Extension -match '\.(tiff?|pdf)$' } |
             ForEach-Object -Process {
                 # Контрольная сумма скана
                 # Испoльзуем ее как ключ в списке файлов (индексе)
