@@ -11,6 +11,8 @@ function Convert-FileAndCreateData {
     if ($null -ne $MaybeFileData -and $MaybeFileData.OriginalName -ceq $SourceFile.Name) {
         return $MaybeFileData
     }
+    
+    Write-Verbose "Обработка оригинала чертежа: $($SourceFile.FullName)"
 
     # Имя скана латиницей
     $TranslitFileName = (ConvertTo-Translit $SourceFile.BaseName) + '.tif'

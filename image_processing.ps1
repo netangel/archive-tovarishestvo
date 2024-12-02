@@ -21,7 +21,10 @@ Import-Module (Join-Path $PSScriptRoot "libs/ToolsHelper.psm1")  -Force
 ($FullSourcePath, $FullResultPath) = Test-RequiredPathsAndReturn $SourcePath $ResultPath $PSScriptRoot
 
 # Проверим, если установлены необходимые инструменты
-Test-RequiredTools
+if (-not (Test-RequiredTools)) {
+    Write-Warning "Необходимые инструменты не установлены. Скрипт завершает работу."
+    exit
+}
 
 # Проверим, если папка с метаданными существует
 if (-not (Test-Path (Join-Path $FullResultPath $MetadataDir)))
@@ -60,6 +63,9 @@ Get-ChildItem $FullSourcePath -Name  |
         #>  
         $CurrentDirIndex = $_
         $FullCurrentDirPath = Join-Path $FullResultPath $CurrentDirIndex.Directory
+
+        Write-Verbose "Обработка папки: $($CurrentDirIndex.OriginalName)"
+        
         # Обработаем файлы сканов в текущей папке
         Get-ChildItem (Join-Path $FullSourcePath $CurrentDirIndex.OriginalName) -File | 
             ForEach-Object -Process {

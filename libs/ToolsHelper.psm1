@@ -64,6 +64,7 @@ function Test-RequiredTools {
         $installChoice = Read-Host "Хотите установить отсутствующие инструменты? (Y/N)"
         if ($installChoice -eq 'Y') {
             Install-RequiredTools
+            return $true
         } else {
             Write-Host "Пожалуйста, установите отсутствующие инструменты вручную для использования этого скрипта."
             Write-Host "Вы можете установить их с помощью:"
@@ -72,8 +73,11 @@ function Test-RequiredTools {
             Write-Host "- Или загрузить установщики с:"
             Write-Host "  ImageMagick: https://imagemagick.org/script/download.php"
             Write-Host "  Ghostscript: https://ghostscript.com/releases/gsdnld.html"
+            return $false
         }
     }
+
+    return Test-ImageMagick -and Test-Ghostscript
 }
 
 function Get-ToolCommand {
@@ -87,7 +91,7 @@ function Get-ToolCommand {
         'ImageMagick' {
             # Check for different ImageMagick commands in order of preference
             try {
-                $cmdPath = Get-Command $cmd -ErrorAction Stop
+                $cmdPath = Get-Command 'magick' -ErrorAction Stop
                 return $cmdPath.Name
             } catch {
                 throw "ImageMagick не установленна или не в PATH"
@@ -109,4 +113,4 @@ function Get-ToolCommand {
     }
 }
 
-Export-ModuleMember -Function Test-RequiredTools Get-ToolCommand
+Export-ModuleMember -Function Test-RequiredTools, Get-ToolCommand
