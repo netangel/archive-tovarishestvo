@@ -47,7 +47,7 @@ function Convert-FileAndCreateData {
         switch ($SourceFile.Extension) {
             ".pdf" { Convert-PdfToTiff -InputPdfFile  $SourceFile -OutputTiffFileName $OutputFileName }
             ".tif" { Optimize-Tiff     -InputTiffFile $SourceFile -OutputTiffFileName $OutputFileName } 
-            Default { <# do nothing #> }
+            Default { Write-Warning "Неподдерживаемый формат файла: $($SourceFile.Extension)" }
         }
     }
 
