@@ -14,12 +14,13 @@ Describe "Test-RequiredPathsAndReturn" {
     Context "When using relative paths" {
         It "Should convert relative paths to full paths" {
             # Act
-            $paths = Test-RequiredPathsAndReturn -SourcePath ".\source" -ResultPath ".\result" -ScriptRoot "TestDrive:"
+            $SourcePath = Test-RequiredPathsAndReturn -SourcePath ".\source" -ScriptRoot "TestDrive:"
+            $ResultPath = Test-RequiredPathsAndReturn -SourcePath ".\result" -ScriptRoot "TestDrive:"
+
             
             # Assert
-            $paths[0] | Should -Not -BeNullOrEmpty
-            $paths[1] | Should -Not -BeNullOrEmpty
-            $paths.Count | Should -Be 2
+            $SourcePath | Should -Not -BeNullOrEmpty
+            $ResultPath | Should -Not -BeNullOrEmpty
         }
     }
 
@@ -29,7 +30,7 @@ Describe "Test-RequiredPathsAndReturn" {
             Remove-Item -Path $testSourcePath -Force
             
             # Act & Assert
-            { Test-RequiredPathsAndReturn -SourcePath $testSourcePath -ResultPath $testResultPath } | 
+            { Test-RequiredPathsAndReturn -SourcePath $testSourcePath } | 
                 Should -Throw "*не найдена!*"
         }
 
@@ -38,7 +39,7 @@ Describe "Test-RequiredPathsAndReturn" {
             Remove-Item -Path $testResultPath -Force
             
             # Act & Assert
-            { Test-RequiredPathsAndReturn -SourcePath $testSourcePath -ResultPath $testResultPath } | 
+            { Test-RequiredPathsAndReturn -SourcePath $testResultPath } | 
                 Should -Throw "*не найдена!*"
         }
     }
@@ -46,11 +47,13 @@ Describe "Test-RequiredPathsAndReturn" {
     Context "When both paths exist" {
         It "Should return both paths" {
             # Act
-            $paths = Test-RequiredPathsAndReturn -SourcePath $testSourcePath -ResultPath $testResultPath 
+            $SourcePath = Test-RequiredPathsAndReturn -SourcePath $testSourcePath
+            $ResultPath = Test-RequiredPathsAndReturn -SourcePath $testResultPath 
+
             
             # Assert
-            $paths[0] | Should -Not -BeNullOrEmpty
-            $paths[1] | Should -Not -BeNullOrEmpty
+            $SourcePath | Should -Not -BeNullOrEmpty
+            $ResultPath | Should -Not -BeNullOrEmpty
         }
     }
 }
