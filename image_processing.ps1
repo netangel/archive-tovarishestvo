@@ -19,7 +19,8 @@ Import-Module (Join-Path $PSScriptRoot "libs/ScanFileHelper.psm1")  -Force
 # Проверим, если пути указанные в параметрах запуска существуют
 # Если нет, то выходим с ошибкой
 # В противном случае вернем полные пути
-($FullSourcePath, $FullResultPath) = Test-RequiredPathsAndReturn $SourcePath $ResultPath $PSScriptRoot
+$FullSourcePath = Test-RequiredPathsAndReturn $SourcePath $PSScriptRoot -ErrorMessage "Папка с оригиналами {0} не найдена"
+$FullResultPath = Test-RequiredPathsAndReturn $ResultPath $PSScriptRoot -ErrorMessage "Папка результатов {0} не найдена"
 
 # Проверим, если установлены необходимые инструменты
 if (-not (Test-RequiredTools)) {

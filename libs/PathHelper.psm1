@@ -82,22 +82,19 @@ function Get-ThumbnailDir () {
 function Test-RequiredPathsAndReturn {
     param (
         [string]$SourcePath,
-        [string]$ResultPath,
-        [string]$ScriptRoot = $PSScriptRoot 
+        [string]$ScriptRoot = $PSScriptRoot,
+        [string]$ErrorMessage = "Папка {0} не найдена!"
     )
     
     $FullSourcePath = ( Test-IsFullPath $SourcePath ) ? $SourcePath : (Join-Path $ScriptRoot $SourcePath)
-    $FullResultPath = ( Test-IsFullPath $ResultPath ) ? $ResultPath : (Join-Path $ScriptRoot $ResultPath)
 
     if (-Not (Test-Path $FullSourcePath)) {
-        throw "Папка с оригиналами ($FullSourcePath) не найдена!"
+        throw $ErrorMessage -f $FullSourcePath 
     }
-    if (-Not (Test-Path $FullResultPath)) {
-        throw "Папка для результатов ($FullResultPath) не найдена!"
-    }
-
-    return $FullSourcePath, $FullResultPath
+    
+    return $FullSourcePath
 }
+
 
 Export-ModuleMember -Function Get-FullPathString, Get-DirectoryOrCreate, Get-TagsFromName, Get-YearFromFilename,
                                 Get-ThumbnailFileName, Get-ThumbnailDir, Test-RequiredPathsAndReturn
