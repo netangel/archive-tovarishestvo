@@ -14,8 +14,9 @@ if (-not (Test-Path $MetadataPath) -or -not (Test-Path $MetadataPath -PathType C
     throw "Metadata path '$MetadataPath' does not exist"
 }
 
-if (-not (Test-Path $ZolaContentPath) -or -not (Test-Path $ZolaContentPath -PathType Container)) {
-    throw "Zola content path '$ZolaContentPath' does not exist"
+# Проверим, если папка содержимого сайта существует, иначе создадим ее
+if (-not (Test-Path $ZolaContentPath)) {
+    New-Item -Path $ZolaContentPath -ItemType Directory | Out-Null
 }
 
 # Main execution
