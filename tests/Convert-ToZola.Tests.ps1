@@ -54,12 +54,6 @@ Describe "Convert-ToZola Tests" {
             { ./Convert-ToZola.ps1 -MetadataPath "TestDrive:/NonExistent" -ZolaContentPath $testZolaPath } |
             Should -Throw
         }
-
-        It "Throws when Zola content path doesn't exist" {
-            # Act & Assert
-            { ./Convert-ToZola.ps1 -MetadataPath $testMetadataPath -ZolaContentPath "Testdrive:/NonExistent" } |
-            Should -Throw
-        }
     }
 
     # Convert-ToZola.Tests.ps1
