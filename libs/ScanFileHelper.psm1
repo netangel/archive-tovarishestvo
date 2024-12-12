@@ -99,6 +99,10 @@ function Repair-MultiPngReference {
         $FileData.PngFilePages = (
             1..($pagesInTif-1) | ForEach-Object { "{0}-{1}.png" -f $ExistedPngName, $_ }
         )
+
+        # Исправим ссылку на превью
+        $ExistedPreviewName = [System.IO.Path]::GetFileNameWithoutExtension($FileData.Thumbnails.400)
+        $FileData.Thumbnails.400 = "$($ExistedPreviewName)-0.png" 
     }
 
     return $FileData
