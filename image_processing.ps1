@@ -82,8 +82,11 @@ Get-ChildItem $FullSourcePath -Name  |
                 # Обработаем файл и вернем метаданные
                 $FileData = Convert-FileAndCreateData $_ $MaybeFileData $FullCurrentDirPath
 
+                # Проверим, если скан был много-страничный, обновим метаданные соответственно
+                $UpdatedFiledData = Repair-MultiPngReference -FileData $FileData -FullCurrentDirPath $FullCurrentDirPath
+
                 # Добавим метаданные в индекс
-                $CurrentDirIndex.Files | Add-Member -MemberType NoteProperty -Name $MD5sum -Value $FileData -Force
+                $CurrentDirIndex.Files | Add-Member -MemberType NoteProperty -Name $MD5sum -Value $UpdatedFiledData -Force
             }
         
         # Сохраним индекс в JSON файл в папке с результатами
