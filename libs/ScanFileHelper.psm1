@@ -79,7 +79,7 @@ function Repair-MultiPngReference {
     )
 
     $TifFilePath = Join-Path $FullCurrentDirPath $FileData.ResultFileName
-    $pagesInTif = Get-TiffPageCount $TifFilePath
+    $PagesInTif = Get-TiffPageCount $TifFilePath
    
     # Если в стуктуре метаданных нет соотв. полей, добавим их
     if ($FileData.PSObject.Properties.Match('MultiPage').Count -eq 0) {
@@ -90,19 +90,19 @@ function Repair-MultiPngReference {
         $FileData | Add-Member -NotePropertyName "PngFilePages" -NotePropertyValue @() 
     }
 
-    if ($pagesInTif -gt 1) {
+    if ($PagesInTif -gt 1) {
         Write-Verbose "Многостраничный чертеж, обновляем метаданные"
-        $ExistedPngName = [System.IO.Path]::GetFileNameWithoutExtension($FileData.PngFile)
+        $ExistedFileName = [System.IO.Path]::GetFileNameWithoutExtension($FileData.ResultFileName)
         $FileData.MultiPage = $true
-        $FileData.PngFile = "$($ExistedPngName)-0.png"
+        $FileData.PngFile = "$($ExistedFileName)-0.png"
 
         $FileData.PngFilePages = (
-            1..($pagesInTif-1) | ForEach-Object { "{0}-{1}.png" -f $ExistedPngName, $_ }
+            1..($PagesInTif-1) | ForEach-Object { "{0}-{1}.png" -f $ExistedFileName, $_ }
         )
 
         # Исправим ссылку на превью
-        $ExistedPreviewName = [System.IO.Path]::GetFileNameWithoutExtension($FileData.Thumbnails.400)
-        $FileData.Thumbnails.400 = "$($ExistedPreviewName)-0.png" 
+        $ExistedPreviewName = [System.IO.Path]::GetFileNameWithoutExtension((Get-ThumbnailFileName -SourceFileName $FileData.ResultFileName -Pixels 400))
+        $FileData.Thumbnails.400 = "$($ExistedPreviewName)-0.png"
     }
 
     return $FileData
