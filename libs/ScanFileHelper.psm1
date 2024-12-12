@@ -58,6 +58,7 @@ function Convert-FileAndCreateData {
         ResultFileName = $TranslitFileName
         OriginalName   = $SourceFile.Name
         PngFile        = $pngFile
+        MultiPage      = $false
         Tags           = Get-TagsFromName $SourceFile.BaseName
         Year           = Get-YearFromFilename $SourceFile.BaseName
         Thumbnails     = Get-Thumbnails $OutputFileName
@@ -71,5 +72,60 @@ function Get-Thumbnails([string]$FileName) {
     }
 }
 
+function Repair-MultiPngReference {
+    param (
+        [string]$FullCurrentDirPath,
+        [PSCustomObject]$FileData 
+    )
 
-Export-ModuleMember -Function Convert-FileAndCreateData
+    $TifFilePath = Join-Path $FullCurrentDirPath $FileData.ResultFileName
+    $PagesInTif = Get-TiffPageCount $TifFilePath
+   
+    # Если в стуктуре метаданных нет соотв. полей, добавим их
+    if ($FileData.PSObject.Properties.Match('MultiPage').Count -eq 0) {
+        $FileData | Add-Member -NotePropertyName "MultiPage" -NotePropertyValue $false
+    }
+    
+    if ($FileData.PSObject.Properties.Match('PngFilePages').Count -eq 0) {
+        $FileData | Add-Member -NotePropertyName "PngFilePages" -NotePropertyValue @() 
+    }
+
+    if ($PagesInTif -gt 1) {
+        Write-Verbose "Многостраничный чертеж, обновляем метаданные"
+        $ExistedFileName = [System.IO.Path]::GetFileNameWithoutExtension($FileData.ResultFileName)
+        $FileData.MultiPage = $true
+        $FileData.PngFile = "$($ExistedFileName)-0.png"
+
+        $FileData.PngFilePages = (
+            1..($PagesInTif-1) | ForEach-Object { "{0}-{1}.png" -f $ExistedFileName, $_ }
+        )
+
+        # Исправим ссылку на превью
+        $ExistedPreviewName = [System.IO.Path]::GetFileNameWithoutExtension((Get-ThumbnailFileName -SourceFileName $FileData.ResultFileName -Pixels 400))
+        $FileData.Thumbnails.400 = "$($ExistedPreviewName)-0.png"
+    }
+
+    return $FileData
+}
+
+
+function Get-TiffPageCount {
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$FilePath
+    )
+    try {
+        # Get ImageMagick command
+        $magick = Get-ToolCommand -Tool ImageMagick
+        
+        $TifFileData = & $magick identify -format "%n\n" $FilePath
+        
+        return [int]($TifFileData | Select-Object -First 1)
+    }
+    catch {
+        Write-Error "Failed to get page count: $_"
+        throw
+    }
+}
+
+Export-ModuleMember -Function Convert-FileAndCreateData, Repair-MultiPngReference 
