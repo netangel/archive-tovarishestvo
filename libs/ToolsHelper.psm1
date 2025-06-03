@@ -26,6 +26,11 @@ function Test-Ghostscript {
     return $gsCommand -or $gsUnix
 }
 
+# Метод для проверки git
+function Test-Git {
+    return Test-CommandExists "git"
+}
+
 # Метод для установки необходимых инструментов при их отсутствии
 # Для установки используется Chocolatey
 function Install-RequiredTools {
@@ -37,16 +42,22 @@ function Install-RequiredTools {
         Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
     }
 
-    # Install ImageMagick if not present
+    # Установим ImageMagick, если отсутствует
     if (-not (Test-ImageMagick)) {
         Write-Host "Устанавливаем ImageMagick..."
         choco install imagemagick -y
     }
 
-    # Install Ghostscript if not present
+    # Установим Ghostscript, если отсутствует
     if (-not (Test-Ghostscript)) {
         Write-Host "Устанавливаем Ghostscript..."
         choco install ghostscript -y
+    }
+
+    # Установим git, если отсутствует 
+    if (-not (Test-Git)) {
+        Write-Host "Устанавливаем Git..."
+        choco install git -y
     }
 }
 
@@ -56,9 +67,11 @@ function Test-RequiredTools {
 
     $hasImageMagick = Test-ImageMagick
     $hasGhostscript = Test-Ghostscript
+    $hasGit = Test-Git 
 
     Write-Host "ImageMagick установлен: $hasImageMagick"
     Write-Host "Ghostscript установлен: $hasGhostscript"
+    Write-Host "Git установлен: $hasGit"
 
     if (-not ($hasImageMagick -and $hasGhostscript)) {
         $installChoice = Read-Host "Хотите установить отсутствующие инструменты? (Y/N)"
@@ -77,7 +90,7 @@ function Test-RequiredTools {
         }
     }
 
-    return Test-ImageMagick -and Test-Ghostscript
+    return Test-ImageMagick -and Test-Ghostscript -and Test-Git
 }
 
 function Get-ToolCommand {
@@ -113,4 +126,25 @@ function Get-ToolCommand {
     }
 }
 
-Export-ModuleMember -Function Test-RequiredTools, Get-ToolCommand
+# Cross-platform PowerShell process starter
+function Get-CrossPlatformPwsh {
+    # Detect the operating system and set the appropriate PowerShell executable
+    if ($IsWindows -or ($PSVersionTable.PSVersion.Major -lt 6 -and [System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Win32NT)) {
+        # Windows - use powershell.exe or pwsh.exe
+        $pwshPath = if (Get-Command "pwsh.exe" -ErrorAction SilentlyContinue) { "pwsh.exe" } else { "powershell.exe" }
+    }
+    elseif ($IsLinux -or $IsMacOS -or ($PSVersionTable.PSVersion.Major -ge 6)) {
+        # Linux/macOS - use pwsh
+        $pwshPath = "pwsh"
+    }
+    else {
+        # Fallback detection
+        $pwshPath = if (Get-Command "pwsh" -ErrorAction SilentlyContinue) { "pwsh" } else { "powershell" }
+    }
+    
+    Write-Host "Using PowerShell executable: $pwshPath"
+    
+    return $pwshPath
+}
+
+Export-ModuleMember -Function Test-RequiredTools, Get-ToolCommand, Get-CrossPlatformPwsh

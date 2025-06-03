@@ -29,9 +29,28 @@ if (-not (Test-RequiredTools)) {
 }
 
 # Проверим, если папка с метаданными существует
-if (-not (Test-Path (Join-Path $FullResultPath $MetadataDir)))
+$FullMetadataPath = Join-Path $FullResultPath $MetadataDir
+if (-not (Test-Path $FullMetadataPath))
 {
     New-Item -Path $ResultPath -ItemType Directory -Name $MetadataDir | Out-Null
+}
+
+# Проверим состояние репозитория в папке метаданных
+# 1. Если репозиторий не инициализирован – создадим новый
+# 2. Если репозитарий есть – обновим основную ветку и создадим новую, 
+#    для отcлеживания результатов обработки
+$matadataGitUrl = "git@gitlab.com:solombala-archive/metadata.git"
+$pwshPath = Get-CrossPlatformPwsh
+$gitCheckProcess = Start-Process -FilePath $pwshPath `
+        -ArgumentList "-File", "./Sync-MetadataGitRepo.ps1", "-GitDirectory", $FullMetadataPath, "-UpstreamUrl", $matadataGitUrl `
+        -Wait -PassThru -NoNewWindow
+
+$gitCheckStatus = $gitCheckProcess.ExitCode -eq 0
+
+if (-ne $gitCheckStatus)
+{
+    Write-Warning "В папке metadata нет корректно настроенного git репозитория"
+    exit 
 }
 
 # Обработка корневой папки, для каждой папки внутри прочитаем индекс
