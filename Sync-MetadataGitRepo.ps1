@@ -56,7 +56,7 @@ try {
     
     if ($currentBranch -ne "main") {
         Write-Host "Переключаемся с ветки $currentBranch на main.."
-        git checkout main 2>$null | Out-Null
+        git switch main 2>$null | Out-Null
         if ($LASTEXITCODE -ne 0) {
             Exit-WithError "Не получилось переключиться на main"
         }

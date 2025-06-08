@@ -36,8 +36,7 @@ if (-not (Test-Path $FullMetadataPath))
 }
 
 # Проверим состояние репозитория в папке метаданных
-# 1. Если репозиторий не инициализирован – создадим новый
-# 2. Если репозитарий есть – обновим основную ветку и создадим новую, 
+# Если репозитарий есть – обновим основную ветку и создадим новую, 
 #    для отcлеживания результатов обработки
 $matadataGitUrl = "git@gitlab.com:solombala-archive/metadata.git"
 $pwshPath = Get-CrossPlatformPwsh
@@ -47,6 +46,7 @@ $gitCheckProcess = Start-Process -FilePath $pwshPath `
 
 $gitCheckStatus = $gitCheckProcess.ExitCode -eq 0
 
+# Проблема с репозиторием
 if (-ne $gitCheckStatus)
 {
     Write-Warning "В папке metadata нет корректно настроенного git репозитория"
