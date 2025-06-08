@@ -47,6 +47,8 @@ drwxr-xr-x@ 9 akrivopolenov  staff    288 Jun  7 21:45 .git
 ```
 git init
 git remote add origin git@gitlab.com:solombala-archive/metadata
+git switch main
+git branch --set-upstream-to=origin/main main
 ```
 
 ### Contribution guidelines ###

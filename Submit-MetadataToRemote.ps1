@@ -1,16 +1,12 @@
 Param(
     [Parameter(Mandatory=$true)]
     [string]$GitDirectory,
-    
-    [Parameter(Mandatory=$true)]
-    [string]$UpstreamUrl,
 
     [Parameter(Mandatory=$true)]
-    [string]$BranchName 
+    [string]$GitBranch
 )
 
 Import-Module (Join-Path $PSScriptRoot "libs/GitHelper.psm1") -Force
-Import-Module (Join-Path $PSScriptRoot "libs/ToolsHelper.psm1") -Force
 
 try {
     if (-not (Test-Path $GitDirectory)) {
@@ -23,20 +19,12 @@ try {
     if (-not (Test-Path ".git")) {
         Exit-WithError "В текущей папке нет инициализированного git-репозитория: $GitDirectory"
     }
-    
-    Test-GitConnection $UpstreamUrl
-    
-    Switch-ToMainBranch
 
-    Update-MainBranch
+    Add-AllNewFiles
 
-    New-ProcessingBranch $BranchName
-    
-    Write-Host "Мы теперь в новой ветке $BranchName и готовы работать дальше!"
-    
-    # Return success
-    exit 0
-    
-} catch {
-    Exit-WithError "Unexpected error: $($_.Exception.Message)"
+    Push-GitCommit
+
+}
+catch {
+    <#Do this if a terminating exception happens#>
 }
