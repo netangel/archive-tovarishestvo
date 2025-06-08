@@ -147,4 +147,12 @@ function Get-CrossPlatformPwsh {
     return $pwshPath
 }
 
-Export-ModuleMember -Function Test-RequiredTools, Get-ToolCommand, Get-CrossPlatformPwsh
+# Function to write error and exit with failure
+function Exit-WithError {
+    param([string]$Message)
+    Write-Error $Message
+    exit 1
+}
+
+
+Export-ModuleMember -Function Test-RequiredTools, Get-ToolCommand, Get-CrossPlatformPwsh, Exit-WithError
