@@ -1,10 +1,6 @@
 $ThumbnailDir = "thumbnails"
 $MetadataDir = "metadata"
 
-function Get-FullPathString([string] $FirstPart, [string] $SecondPart) {
-    Join-Path $FirstPart $SecondPart
-}
-
 function Get-DirectoryOrCreate([string] $BasePath, [string] $DirName)  {
     $TranslitName = ConvertTo-Translit $DirName
 
@@ -95,8 +91,7 @@ function Test-RequiredPathsAndReturn {
     return $FullSourcePath
 }
 
-
-Export-ModuleMember -Function Get-FullPathString, Get-DirectoryOrCreate, Get-TagsFromName, Get-YearFromFilename,
+Export-ModuleMember -Function Get-DirectoryOrCreate, Get-TagsFromName, Get-YearFromFilename,
                                 Get-ThumbnailFileName, Get-ThumbnailDir, Test-RequiredPathsAndReturn
 
 Export-ModuleMember -Variable MetadataDir

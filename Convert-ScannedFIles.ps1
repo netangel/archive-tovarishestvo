@@ -15,6 +15,7 @@ Import-Module (Join-Path $PSScriptRoot "libs/ConvertImage.psm1") -Force
 Import-Module (Join-Path $PSScriptRoot "libs/JsonHelper.psm1")   -Force
 Import-Module (Join-Path $PSScriptRoot "libs/ToolsHelper.psm1")  -Force
 Import-Module (Join-Path $PSScriptRoot "libs/ScanFileHelper.psm1")  -Force
+Import-Module (Join-Path $PSScriptRoot "libs/GitHelper.psm1")  -Force
 
 # Проверим, если пути указанные в параметрах запуска существуют
 # Если нет, то выходим с ошибкой
@@ -29,9 +30,33 @@ if (-not (Test-RequiredTools)) {
 }
 
 # Проверим, если папка с метаданными существует
-if (-not (Test-Path (Join-Path $FullResultPath $MetadataDir)))
+$FullMetadataPath = Join-Path $FullResultPath $MetadataDir
+if (-not (Test-Path $FullMetadataPath))
 {
     New-Item -Path $ResultPath -ItemType Directory -Name $MetadataDir | Out-Null
+}
+
+# Проверим состояние репозитория в папке метаданных
+# Если репозитарий есть – обновим основную ветку и создадим новую, 
+#    для отcлеживания результатов обработки
+$matadataGitUrl = "git@gitlab.com:solombala-archive/metadata.git"
+$timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+$branchName = "processing-results-$timestamp"
+
+$pwshPath = Get-CrossPlatformPwsh
+
+$gitCheckProcess = Start-Process -FilePath $pwshPath `
+        -ArgumentList "-File", "./Sync-MetadataGitRepo.ps1", "-GitDirectory", $FullMetadataPath, "-UpstreamUrl", $matadataGitUrl `
+            "-BranchName", $branchName `
+        -Wait -PassThru -NoNewWindow
+
+$gitCheckStatus = $gitCheckProcess.ExitCode -eq 0
+
+# Проблема с репозиторием
+if (-ne $gitCheckStatus)
+{
+    Write-Warning "В папке metadata нет корректно настроенного git репозитория"
+    exit 
 }
 
 # Обработка корневой папки, для каждой папки внутри прочитаем индекс
@@ -93,3 +118,17 @@ Get-ChildItem $FullSourcePath -Name  |
         $JsonIndexFile = Join-Path (Join-Path $FullResultPath $MetadataDir) ($CurrentDirIndex.Directory + ".json")
         $CurrentDirIndex | ConvertTo-Json -depth 10 | Set-Content -Path $JsonIndexFile -Force
     }
+
+$gitSubmitProcess = Start-Process -FilePath $pwshPath `
+        -ArgumentList "-File", "./Submit-MetadataToRemote.ps1", "-GitDirectory", $FullMetadataPath, "-GitBranch", $branchName `
+        -Wait -PassThru -NoNewWindow
+
+$gitSubmitStatus = $gitSubmitProcess.ExitCode -eq 0
+
+if (-ne $gitSubmitStatus)
+{
+    Write-Warning "В папке metadata нет корректно настроенного git репозитория"
+    exit 
+}
+
+New-GitLabMergeRequest $branchName, "Результаты обработки $timestamp" 
