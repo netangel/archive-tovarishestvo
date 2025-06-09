@@ -186,7 +186,7 @@ function New-GitLabMergeRequest {
         Description  = $Description
     }
     
-    Submit-MergeRequest @params
+    Submit-MergeRequest @params | Out-Null
 }
 
 function Submit-MergeRequest {
@@ -224,8 +224,6 @@ function Submit-MergeRequest {
         "Content-Type"  = "application/json"
     }
 
-    Write-Host $headers
-
     # Prepare the request body
     $body = @{
         source_branch        = $SourceBranch
@@ -245,8 +243,6 @@ function Submit-MergeRequest {
 
     # Convert to JSON
     $jsonBody = $body | ConvertTo-Json -Depth 3
-
-    Write-Host $jsonBody
 
     try {
         Write-Host "Создаем merge запрос..." -ForegroundColor Yellow
