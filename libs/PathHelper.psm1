@@ -81,6 +81,10 @@ function Test-RequiredPathsAndReturn {
         [string]$ScriptRoot = $PSScriptRoot,
         [string]$ErrorMessage = "Папка {0} не найдена!"
     )
+
+    if ([string]::IsNullOrWhiteSpace($SourcePath)) {
+        throw "Путь к папке не указан"
+    }
     
     $FullSourcePath = ( Test-IsFullPath $SourcePath ) ? $SourcePath : (Join-Path $ScriptRoot $SourcePath)
 
