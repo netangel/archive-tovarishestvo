@@ -131,7 +131,7 @@ function Get-CrossPlatformPwsh {
     # Detect the operating system and set the appropriate PowerShell executable
     if ($IsWindows -or ($PSVersionTable.PSVersion.Major -lt 6 -and [System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Win32NT)) {
         # Windows - use powershell.exe or pwsh.exe
-        $pwshPath = if (Get-Command "pwsh.exe" -ErrorAction SilentlyContinue) { "pwsh.exe" } else { "powershell.exe" }
+        $pwshPath = (Get-Command "pwsh.exe" -ErrorAction SilentlyContinue) ? "pwsh.exe" : "powershell.exe"
     }
     elseif ($IsLinux -or $IsMacOS -or ($PSVersionTable.PSVersion.Major -ge 6)) {
         # Linux/macOS - use pwsh
@@ -139,10 +139,10 @@ function Get-CrossPlatformPwsh {
     }
     else {
         # Fallback detection
-        $pwshPath = if (Get-Command "pwsh" -ErrorAction SilentlyContinue) { "pwsh" } else { "powershell" }
+        $pwshPath = (Get-Command "pwsh" -ErrorAction SilentlyContinue) ? "pwsh" : "powershell"
     }
     
-    Write-Host "Using PowerShell executable: $pwshPath"
+    Write-Host "Имя команды-интерпретатора PowerShell: $pwshPath"
     
     return $pwshPath
 }

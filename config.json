@@ -1,5 +1,7 @@
 {
   "SourcePath": "/Users/akrivopolenov/Documents/Tovarishestvo/generationscript/../test-data/source",
   "ResultPath": "/Users/akrivopolenov/Documents/Tovarishestvo/generationscript/../test-data/results",
-  "ZolaContentPath": "/Users/akrivopolenov/Documents/Tovarishestvo/generationscript/../solombala-shipyard-archive-site/content"
+  "ZolaContentPath": "/Users/akrivopolenov/Documents/Tovarishestvo/generationscript/../solombala-shipyard-archive-site/content",
+  "GitRepoUrl": "git@gitlab.com:solombala-archive/metadata.git",
+  "GitlabProjectId": "69777976"
 }
