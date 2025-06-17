@@ -137,8 +137,7 @@ function New-ProcessingBranch {
     param([string]$BranchName)
     
     Invoke-GitOperation -Arguments @("switch", "-c", $BranchName) -OperationName "switch -c" `
-        -PreOperation { Write-Host "Создадим новую ветку для новой версии метаданных: $B
-ranchName" } `
+        -PreOperation { Write-Host "Создадим новую ветку для новой версии метаданных: $BranchName" } `
         -PostOperation { 
         param($result)
         Write-Host "Ветка $BranchName создана успешно"
@@ -185,7 +184,7 @@ function New-GitLabMergeRequest {
         Title        = $Title
         Description  = $Description
     }
-    
+
     Submit-MergeRequest @params | Out-Null
 }
 
