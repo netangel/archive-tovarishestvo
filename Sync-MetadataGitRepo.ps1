@@ -9,6 +9,10 @@ Param(
     [string]$BranchName 
 )
 
+if ($env:PARENT_VERBOSE -eq "true") {
+    $VerbosePreference = "Continue"
+}
+
 Import-Module (Join-Path $PSScriptRoot "libs/GitHelper.psm1") -Force
 Import-Module (Join-Path $PSScriptRoot "libs/ToolsHelper.psm1") -Force
 

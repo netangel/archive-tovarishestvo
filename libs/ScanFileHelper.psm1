@@ -9,6 +9,7 @@ function Convert-FileAndCreateData {
     # и оригинальное имя файла совпадает с текущим именем файла, 
     # то файл уже обработан
     if ($null -ne $MaybeFileData -and $MaybeFileData.OriginalName -ceq $SourceFile.Name) {
+        Write-Verbose "Обработанный чертеж с таким именем уже есть в метаданных, пропускаем"
         return $MaybeFileData
     }
 
@@ -21,7 +22,10 @@ function Convert-FileAndCreateData {
     # Полный путь старому обработанному файлу, если у нас есть метаданные 
     $OldFilePath = ($null -ne $MaybeFileData) ? (Join-Path $ResultDirFullPath $MaybeFileData.ResultFileName) : $null
 
-    # Если файл уже обработан, то просто переименуем его
+    # Ситуация: исходный файл переименован, но метаданные о нем существуют
+    # и в папке результатов файлы под старым именем
+    # Нам требуется преименовать главный файл чертежа в папке обработанных
+    # переименуем также файл в формате png
     # и удалим старый файл, старый png и старые превью
     if ($null -ne $OldFilePath -and (Test-Path $OldFilePath )) {
         # Переименуем и удалим старый файл
@@ -42,7 +46,7 @@ function Convert-FileAndCreateData {
         }
     }
 
-    # Обработаем файл
+    # Обработаем исходный файл чертежа
     if ( -not (Test-Path ($OutputFileName)) ) {
         switch ($SourceFile.Extension) {
             ".pdf" { Convert-PdfToTiff -InputPdfFile  $SourceFile -OutputTiffFileName $OutputFileName }
@@ -52,6 +56,9 @@ function Convert-FileAndCreateData {
     }
 
     $pngFile = ($null -ne $MaybeFileData) ? $WebPngFile : (Convert-WebPngOrRename -InputFileName $OutputFileName)
+
+    Write-Verbose "Результат обработки чертежа, файл tif: $($OutputFileName)"
+    Write-Verbose "Результат обработки чертежа, файл png: $($pngFile)"
 
     # Вернем метаданные 
     return [PSCustomObject]@{
