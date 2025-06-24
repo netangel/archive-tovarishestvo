@@ -24,6 +24,10 @@ param(
     [bool]$RemoveSourceBranch = $true
 )
 
+if ($env:PARENT_VERBOSE -eq "true") {
+    $VerbosePreference = "Continue"
+}
+
 # Construct the API URL
 $apiUrl = "$GitLabUrl/api/v4/projects/$ProjectId/merge_requests"
 

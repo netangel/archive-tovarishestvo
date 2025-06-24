@@ -1,3 +1,12 @@
+[CmdletBinding()]
+param()
+
+# Сохраним значения флага для вывода доп. информации
+# Его можем использовать в других скриптах
+if ($VerbosePreference -eq "Continue") {
+    $env:PARENT_VERBOSE = "true"
+}
+
 # Загрузим настройки  
 $config = Get-Content "config.json" | ConvertFrom-Json -AsHashtable
 

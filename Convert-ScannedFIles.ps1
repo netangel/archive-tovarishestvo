@@ -9,6 +9,10 @@ Param(
     [string] $ResultPath
 )
 
+if ($env:PARENT_VERBOSE -eq "true") {
+    $VerbosePreference = "Continue"
+}
+
 Import-Module (Join-Path $PSScriptRoot "libs/ConvertText.psm1")  -Force
 Import-Module (Join-Path $PSScriptRoot "libs/PathHelper.psm1")   -Force
 Import-Module (Join-Path $PSScriptRoot "libs/ConvertImage.psm1") -Force
