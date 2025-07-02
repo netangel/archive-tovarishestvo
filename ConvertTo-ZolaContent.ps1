@@ -31,8 +31,8 @@ try {
     New-RootIndexPage -OutputPath $ZolaContentPath
 
     # Process all JSON files
-    Get-ChildItem -Path $MetadataPath -Filter "*.json" -Recurse 
-    Where-Object { $_.FullName -notlike "*\scripts\*" } 
+    Get-ChildItem -Path $MetadataPath -Filter "*.json" -Recurse
+    | Where-Object { $_.FullName -notlike "*\scripts\*" } 
     | ForEach-Object {
         Write-Host "Processing $($_.FullName)"
         Format-JsonFileIntoContent -JsonPath $_.FullName -OutputPath $ZolaContentPath
