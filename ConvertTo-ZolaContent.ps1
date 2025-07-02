@@ -32,7 +32,7 @@ try {
 
     # Process all JSON files
     Get-ChildItem -Path $MetadataPath -Filter "*.json" -Recurse
-    | Where-Object { $_.FullName -notlike "*\scripts\*" } 
+    | Where-Object { $_.Directory.Name -ne "scripts" } 
     | ForEach-Object {
         Write-Host "Processing $($_.FullName)"
         Format-JsonFileIntoContent -JsonPath $_.FullName -OutputPath $ZolaContentPath
