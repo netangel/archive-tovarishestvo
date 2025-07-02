@@ -1,0 +1,67 @@
+stages:
+  - build-and-deploy
+
+variables:
+  ZOLA_VERSION: "0.20.0"
+  TEMPLATES_REPO: "netangel/solombala-shipyard-archive-site"
+  SCRIPTS_REPO: "netangel/archive-tovarishestvo"
+  S3_ENDPOINT: "se-sto-1.linodeobjects.com"
+  S3_BUCKET: "schooner-archive-v2"
+  GIT_SUBMODULE_STRATEGY: none
+
+build-and-deploy:
+  stage: build-and-deploy
+  image: ubuntu:latest
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_PIPELINE_SOURCE == "web"
+  before_script:
+    # Update package list and install dependencies
+    - apt-get update -qq
+    - apt-get install -y curl tar sudo git openssh-client s3cmd wget
+    # Install PowerShell
+    - wget -q https://packages.microsoft.com/config/ubuntu/20.04/packages-microsoft-prod.deb
+    - dpkg -i packages-microsoft-prod.deb
+    - apt-get update -qq
+    - apt-get install -y powershell
+    
+  script:
+    # Clone template repository from GitHub (public)
+    - echo "Cloning templates from https://github.com/$TEMPLATES_REPO.git"
+    - git clone https://github.com/$TEMPLATES_REPO.git template
+    
+    # Clone scripts repository from GitHub (private)
+    - echo "Cloning scripts from GitHub (private repo)"
+    - git clone https://$GITHUB_TOKEN@github.com/$SCRIPTS_REPO.git scripts
+    
+    # Install Zola
+    - curl -L "https://github.com/getzola/zola/releases/download/v${ZOLA_VERSION}/zola-v${ZOLA_VERSION}-x86_64-unknown-linux-gnu.tar.gz" | tar xz
+    - mv zola /usr/local/bin
+    
+    # Convert JSON to Zola content using PowerShell
+    - echo "Running PowerShell conversion script"
+    - pwsh -File "./scripts/ConvertTo-ZolaContent.ps1" -MetadataPath "./" -ZolaContentPath "./template/content"
+    
+    # Build Zola site
+    - cd template
+    - zola build
+    - cd ..
+    
+    # Configure s3cmd
+    - |
+      cat > ~/.s3cfg << EOF
+      [default]
+      access_key = $LINODE_BUCKET_ACCESS_KEY_ID
+      secret_key = $LINODE_BUCKET_SECRET_ACCESS_KEY
+      host_base = $S3_ENDPOINT
+      host_bucket = %(bucket)s.$S3_ENDPOINT
+      use_https = True
+      EOF
+    
+    # Upload to Linode Objects
+    - |
+      s3cmd sync --acl-public \
+        --no-mime-magic \
+        --guess-mime-type \
+        ./template/public/ s3://$S3_BUCKET/
+      
