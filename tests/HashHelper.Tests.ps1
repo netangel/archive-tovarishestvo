@@ -36,6 +36,17 @@ Describe 'Blake3 Hash Generation' {
             { Get-Blake3Hash -FilePath $nonExistentFile } | Should -Throw "*не найден*"
         }
         
+        It 'Should handle files with spaces in filename' {
+            # Create a test file with spaces in the name
+            $testFileWithSpaces = Join-Path $TestDrive "test file with spaces.txt"
+            "Test content for Blake3 hashing with spaces" | Out-File -FilePath $testFileWithSpaces -Encoding utf8
+            
+            # Should not throw an error and should return a hash
+            $result = Get-Blake3Hash -FilePath $testFileWithSpaces
+            $result | Should -Not -BeNullOrEmpty
+            $result | Should -Match '^[A-F0-9]{64}$'
+        }
+        
     }
 }
 

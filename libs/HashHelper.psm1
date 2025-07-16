@@ -98,7 +98,7 @@ function Get-Blake3Hash {
     
     try {
         $outputFile = [System.IO.Path]::GetTempFileName()
-        $process = Start-Process -FilePath "b3sum" -ArgumentList $FilePath -Wait -PassThru -NoNewWindow -RedirectStandardOutput $outputFile
+        $process = Start-Process -FilePath "b3sum" -ArgumentList @("`"$FilePath`"") -Wait -PassThru -NoNewWindow -RedirectStandardOutput $outputFile
         
         if ($process.ExitCode -ne 0) {
             Remove-Item $outputFile -ErrorAction SilentlyContinue
