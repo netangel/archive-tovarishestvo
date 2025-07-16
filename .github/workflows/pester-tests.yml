@@ -12,6 +12,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
      
+      - name: Install Blake3 (b3sum)
+        shell: pwsh
+        run: |
+          # Install b3sum using Chocolatey
+          choco install b3sum -y
+          
+          # Verify installation
+          b3sum --version
+          
       - name: Install Pester
         shell: pwsh
         run: |
