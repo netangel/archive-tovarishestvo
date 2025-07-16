@@ -15,9 +15,10 @@ if ($env:PARENT_VERBOSE -eq "true") {
 
 Import-Module (Join-Path $PSScriptRoot "libs/ConvertText.psm1")  -Force
 Import-Module (Join-Path $PSScriptRoot "libs/PathHelper.psm1")   -Force
+Import-Module (Join-Path $PSScriptRoot "libs/ToolsHelper.psm1")  -Force
 Import-Module (Join-Path $PSScriptRoot "libs/ConvertImage.psm1") -Force
 Import-Module (Join-Path $PSScriptRoot "libs/JsonHelper.psm1")   -Force
-Import-Module (Join-Path $PSScriptRoot "libs/ToolsHelper.psm1")  -Force
+Import-Module (Join-Path $PSScriptRoot "libs/HashHelper.psm1")   -Force
 Import-Module (Join-Path $PSScriptRoot "libs/ScanFileHelper.psm1")  -Force
 
 # Проверим, если пути указанные в параметрах запуска существуют
@@ -28,6 +29,9 @@ $FullResultPath = Test-RequiredPathsAndReturn $ResultPath $PSScriptRoot -ErrorMe
 
 # Проверим, если папка с метаданными существует
 $FullMetadataPath = Test-RequiredPathsAndReturn $MetadataDir $FullResultPath -ErrorMessage "Папка метаданных {0} не найдена"
+
+# Проверим доступность Blake3 (b3sum) для вычисления хешей
+Ensure-Blake3Available | Out-Null
 
 # Обработка корневой папки, для каждой папки внутри прочитаем индекс
 # или создадим новый, если папка обрабатывается впервые
@@ -67,10 +71,16 @@ Get-ChildItem $FullSourcePath -Name  |
         Get-ChildItem (Join-Path $FullSourcePath $CurrentDirIndex.OriginalName) -File |
             Where-Object { $_.Extension -match '\.(tiff?|pdf)$' } |
             ForEach-Object -Process {
-                # Контрольная сумма скана
+                # Контрольная сумма скана (Blake3)
                 # Испoльзуем ее как ключ в списке файлов (индексе)
-                $MD5sum = (Get-FileHash $_.FullName MD5).Hash
-                $MaybeFileData = $CurrentDirIndex.Files.$MD5sum
+                $hashStartTime = Get-Date
+                $Blake3Hash = Get-Blake3Hash $_.FullName
+                $hashEndTime = Get-Date
+                $hashDuration = $hashEndTime - $hashStartTime
+                
+                Write-Verbose "Blake3 hash для $($_.Name): $($hashDuration.TotalMilliseconds.ToString("F2")) мс"
+                
+                $MaybeFileData = $CurrentDirIndex.Files.$Blake3Hash
 
                 Write-Verbose "Обработка оригинала чертежа: $($_.FullName)"
                 
@@ -81,7 +91,7 @@ Get-ChildItem $FullSourcePath -Name  |
                 $UpdatedFiledData = Repair-MultiPngReference -FileData $FileData -FullCurrentDirPath $FullCurrentDirPath
 
                 # Добавим метаданные в индекс
-                $CurrentDirIndex.Files | Add-Member -MemberType NoteProperty -Name $MD5sum -Value $UpdatedFiledData -Force
+                $CurrentDirIndex.Files | Add-Member -MemberType NoteProperty -Name $Blake3Hash -Value $UpdatedFiledData -Force
             }
         
         # Сохраним индекс в JSON файл в папке с результатами

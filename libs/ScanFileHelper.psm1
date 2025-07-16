@@ -1,3 +1,5 @@
+Import-Module (Join-Path $PSScriptRoot "ToolsHelper.psm1") -Force
+
 function Convert-FileAndCreateData {
     param (
         [System.IO.FileInfo]$SourceFile,

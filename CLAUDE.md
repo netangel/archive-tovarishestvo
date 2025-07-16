@@ -64,10 +64,11 @@ Invoke-Pester ./tests/
 - `GitHelper.psm1` - Git operations and repository management
 - `ScanFileHelper.psm1` - File scanning and metadata extraction
 - `JsonHelper.psm1` - JSON processing and validation
-- `PathHelper.psm1` - Path resolution and validation
+- `PathHelper.psm1` - Path resolution and validation (supports UNC network paths)
 - `ConvertImage.psm1` - Image conversion and optimization
 - `ConvertText.psm1` - Text processing and transliteration
 - `ToolsHelper.psm1` - System tool validation and utilities
+- `HashHelper.psm1` - Blake3 hash generation for file indexing
 
 ### Configuration
 
@@ -103,12 +104,15 @@ Invoke-Pester ./tests/
 - Git (for metadata repository management)
 - ImageMagick or similar (for image conversion)
 - GitLab CLI or API access (for merge request creation)
+- Blake3 (`b3sum` command-line tool for file hashing - auto-installed if missing)
 - Pester (for running tests)
 
 ## Important Notes
 
-- All file paths are resolved through `PathHelper.psm1` functions
+- All file paths are resolved through `PathHelper.psm1` functions (supports Windows UNC network paths)
+- The system uses Blake3 hashing instead of MD5 for file indexing (faster and more secure)
 - The system uses transliteration for filename normalization
 - Git operations are handled through custom `GitHelper.psm1` wrapper
 - Metadata is stored in JSON format and versioned through Git
 - The system generates timestamped branches for each processing run
+- Blake3 (`b3sum`) is automatically installed on first run if not present
