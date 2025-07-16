@@ -11,6 +11,10 @@ function Get-DirectoryOrCreate([string] $BasePath, [string] $DirName)  {
     return $TranslitName
 }
 
+function Get-IsWindowsPlatform {
+    return $IsWindows
+}
+
 function Test-IsFullPath([string] $Path) {
     if ([string]::IsNullOrWhiteSpace($Path)) {
         return $false
@@ -18,8 +22,12 @@ function Test-IsFullPath([string] $Path) {
     
     if ($Path -match '^TestDrive:') {
         return $true
-    } elseif ($IsWindows) {
-        return [System.IO.Path]::IsPathRooted($Path) -and $Path -match '^[A-Za-z]:\\'
+    } elseif (Get-IsWindowsPlatform) {
+        # Support both regular drive paths and UNC network paths
+        return (
+            ($Path -match '^[A-Za-z]:\\') -or      # Regular drive path (C:\, D:\, etc.)
+            ($Path -match '^\\\\[^\\]+\\[^\\]+')   # UNC path (\\server\share)
+        )
     } else {
         return $Path.StartsWith('/')
     }
@@ -96,6 +104,6 @@ function Test-RequiredPathsAndReturn {
 }
 
 Export-ModuleMember -Function Get-DirectoryOrCreate, Get-TagsFromName, Get-YearFromFilename,
-                                Get-ThumbnailFileName, Get-ThumbnailDir, Test-RequiredPathsAndReturn
+                                Get-ThumbnailFileName, Get-ThumbnailDir, Test-RequiredPathsAndReturn, Get-IsWindowsPlatform, Test-IsFullPath
 
 Export-ModuleMember -Variable MetadataDir

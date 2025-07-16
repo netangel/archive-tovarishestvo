@@ -84,3 +84,98 @@ Describe 'File name => Thumbnail file name' {
             | Should -Be (Join-Path "thumbnails" "filename_500.png")
     }
 }
+
+Describe 'Test-IsFullPath - Network Path Support' {
+    BeforeAll {
+        Import-Module $PSScriptRoot/../libs/PathHelper.psm1 -Force
+    }
+    
+    Context 'Windows UNC Paths' {
+        BeforeAll {
+            # Mock Get-IsWindowsPlatform to return true for Windows tests
+            Mock Get-IsWindowsPlatform { return $true } -ModuleName PathHelper
+        }
+        
+        It 'Should recognize UNC server-share path' {
+            $Path = '\\server\share'
+            $Result = Test-IsFullPath $Path
+            $Result | Should -Be $true
+        }
+        
+        It 'Should recognize UNC server-share path with trailing backslash' {
+            $Path = '\\server\share\'
+            $Result = Test-IsFullPath $Path
+            $Result | Should -Be $true
+        }
+        
+        It 'Should recognize UNC path with subdirectories' {
+            $Path = '\\server\share\folder\subfolder'
+            $Result = Test-IsFullPath $Path
+            $Result | Should -Be $true
+        }
+        
+        It 'Should recognize UNC path with IP address' {
+            $Path = '\\192.168.1.100\share'
+            $Result = Test-IsFullPath $Path
+            $Result | Should -Be $true
+        }
+        
+        It 'Should reject invalid UNC paths' {
+            $Path = '\\server'
+            $Result = Test-IsFullPath $Path
+            $Result | Should -Be $false
+        }
+        
+        It 'Should reject single backslash' {
+            $Path = '\'
+            $Result = Test-IsFullPath $Path
+            $Result | Should -Be $false
+        }
+    }
+    
+    Context 'Regular Windows Paths' {
+        BeforeAll {
+            # Mock Get-IsWindowsPlatform to return true for Windows tests
+            Mock Get-IsWindowsPlatform { return $true } -ModuleName PathHelper
+        }
+        
+        It 'Should still recognize regular drive paths' {
+            $Path = 'C:\Windows\System32'
+            $Result = Test-IsFullPath $Path
+            $Result | Should -Be $true
+        }
+        
+        It 'Should still recognize single drive letter paths' {
+            $Path = 'D:\'
+            $Result = Test-IsFullPath $Path
+            $Result | Should -Be $true
+        }
+    }
+    
+    Context 'Unix Paths' {
+        BeforeAll {
+            # Mock Get-IsWindowsPlatform to return false for Unix tests
+            Mock Get-IsWindowsPlatform { return $false } -ModuleName PathHelper
+        }
+        
+        It 'Should recognize Unix absolute paths' {
+            $Path = '/home/user/documents'
+            $Result = Test-IsFullPath $Path
+            $Result | Should -Be $true
+        }
+        
+        It 'Should reject Unix relative paths' {
+            $Path = 'home/user/documents'
+            $Result = Test-IsFullPath $Path
+            $Result | Should -Be $false
+        }
+    }
+    
+    Context 'TestDrive Paths' {
+        It 'Should still recognize TestDrive paths regardless of platform' {
+            $Path = 'TestDrive:\test\path'
+            $Result = Test-IsFullPath $Path
+            $Result | Should -Be $true
+        }
+    }
+}
