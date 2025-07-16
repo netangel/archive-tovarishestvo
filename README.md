@@ -1,16 +1,114 @@
-# README #
+# Система обработки архива верфи Соломбала
 
-This README would normally document whatever steps are necessary to get your application up and running.
+Автоматизированная система для обработки отсканированных чертежей и документов архива Соломбальской верфи. Система конвертирует исходные файлы, генерирует метаданные, создает миниатюры и публикует контент для веб-сайта.
 
-### What is this repository for? ###
+## Описание проекта
 
-* Quick summary
-* Version
-* [Learn Markdown](https://bitbucket.org/tutorials/markdowndemo)
+Этот репозиторий содержит PowerShell скрипты для:
+- Обработки отсканированных PDF и TIFF файлов
+- Автоматического извлечения метаданных из имен файлов
+- Генерации контента для статического сайта на базе Zola
+- Управления версиями метаданных через Git
+- Создания merge request'ов в GitLab
 
-### Настройки системы для работы проекта ###
+### Основные возможности
 
-#### Git репозиторий
+- **Автоматическая обработка**: Конвертация PDF в TIFF, оптимизация изображений
+- **Генерация метаданных**: Извлечение тегов, дат и другой информации из имен файлов
+- **Создание миниатюр**: Автоматическая генерация превью изображений
+- **Веб-контент**: Генерация контента для статического сайта
+- **Контроль версий**: Отслеживание изменений через Git
+- **Безопасное хеширование**: Использование Blake3 для индексирования файлов
+- **Кроссплатформенность**: Поддержка Windows, macOS и Linux
+
+## Быстрый старт
+
+### Системные требования
+
+- **PowerShell 7+** (Windows, macOS, Linux)
+- **Git** для управления версиями метаданных
+- **ImageMagick** для обработки изображений
+- **Blake3 (b3sum)** для генерации хешей (устанавливается автоматически)
+
+### Установка
+
+1. **Клонирование репозитория**:
+```bash
+git clone <repository-url>
+cd generationscript
+```
+
+2. **Настройка конфигурации**:
+Отредактируйте `config.json`:
+```json
+{
+  "SourcePath": "/path/to/scanned/files",
+  "ResultPath": "/path/to/results",
+  "ZolaContentPath": "/path/to/site/content",
+  "GitRepoUrl": "git@gitlab.com:solombala-archive/metadata.git",
+  "GitlabProjectId": "your-project-id"
+}
+```
+
+3. **Запуск обработки**:
+```powershell
+./Complete-ArchiveProcess.ps1 -Verbose
+```
+
+## Использование
+
+### Основной скрипт обработки
+
+```powershell
+# Полная обработка архива
+./Complete-ArchiveProcess.ps1
+
+# Обработка с подробным выводом
+./Complete-ArchiveProcess.ps1 -Verbose
+```
+
+### Отдельные операции
+
+```powershell
+# Только конвертация файлов
+./Convert-ScannedFIles.ps1 -SourcePath "путь/к/исходникам" -ResultPath "путь/к/результатам"
+
+# Только генерация контента для сайта
+./ConvertTo-ZolaContent.ps1 -MetadataPath "путь/к/метаданным" -ZolaContentPath "путь/к/контенту"
+```
+
+### Тестирование
+
+```powershell
+# Запуск всех тестов
+Invoke-Pester ./tests/
+
+# Запуск конкретного теста
+Invoke-Pester ./tests/HashHelper.Tests.ps1
+```
+
+## Архитектура системы
+
+### Основные скрипты
+
+- `Complete-ArchiveProcess.ps1` - Главный скрипт обработки
+- `Convert-ScannedFIles.ps1` - Конвертация и обработка файлов
+- `ConvertTo-ZolaContent.ps1` - Генерация контента для Zola
+- `Sync-MetadataGitRepo.ps1` - Синхронизация Git репозитория
+- `Submit-MetadataToRemote.ps1` - Отправка изменений в удаленный репозиторий
+
+### Библиотеки (libs/)
+
+- `HashHelper.psm1` - Работа с Blake3 хешами
+- `PathHelper.psm1` - Обработка путей (поддержка UNC сетевых путей)
+- `ConvertImage.psm1` - Конвертация и оптимизация изображений
+- `GitHelper.psm1` - Операции с Git
+- `ZolaContentHelper.psm1` - Генерация контента для Zola
+- `ToolsHelper.psm1` - Вспомогательные утилиты
+
+## Настройки системы
+
+### Git репозиторий
 
 Адрес репозитория для хранения метаданных: [solombala-archive/metadata](https://gitlab.com/solombala-archive/metadata)
 
@@ -51,13 +149,96 @@ git switch main
 git branch --set-upstream-to=origin/main main
 ```
 
-### Contribution guidelines ###
+## Структура файлов
 
-* Writing tests
-* Code review
-* Other guidelines
+```
+generationscript/
+├── Complete-ArchiveProcess.ps1       # Главный скрипт обработки
+├── Convert-ScannedFIles.ps1          # Конвертация файлов
+├── ConvertTo-ZolaContent.ps1         # Генерация контента
+├── config.json                       # Конфигурация системы
+├── libs/                            # Библиотеки модулей
+│   ├── HashHelper.psm1              # Blake3 хеширование
+│   ├── PathHelper.psm1              # Работа с путями
+│   ├── ConvertImage.psm1            # Обработка изображений
+│   ├── GitHelper.psm1               # Git операции
+│   └── ...
+├── tests/                           # Тесты
+│   ├── HashHelper.Tests.ps1
+│   ├── PathHelper.Tests.ps1
+│   └── ...
+└── .github/workflows/               # CI/CD
+    └── pester-tests.yml
+```
 
-### Who do I talk to? ###
+## Особенности реализации
 
-* Repo owner or admin
-* Other community or team contact
+### Blake3 хеширование
+Система использует Blake3 вместо MD5 для:
+- Более быстрого хеширования больших файлов
+- Повышенной криптографической стойкости
+- Кроссплатформенной совместимости
+
+### Поддержка сетевых путей
+Поддерживаются UNC пути Windows:
+```
+\\server\share\path\to\files
+\\192.168.1.100\archive\scans
+```
+
+### Автоматическая установка зависимостей
+Система автоматически устанавливает необходимые инструменты:
+- Blake3 (b3sum) для всех платформ
+- Определение доступных пакетных менеджеров
+- Graceful fallback при ошибках установки
+
+## Мониторинг производительности
+
+При запуске с флагом `-Verbose` система показывает:
+- Время выполнения Blake3 хеширования для каждого файла
+- Прогресс обработки файлов
+- Статистику операций Git
+
+Пример вывода:
+```
+VERBOSE: Blake3 hash для document.pdf: 47.23 мс
+VERBOSE: Blake3 hash для scan_001.tif: 152.87 мс
+```
+
+## Разработка и тестирование
+
+### Запуск тестов
+```powershell
+# Все тесты
+Invoke-Pester ./tests/
+
+# Конкретная функциональность
+Invoke-Pester ./tests/HashHelper.Tests.ps1 -Verbose
+```
+
+### CI/CD
+Проект использует GitHub Actions для:
+- Автоматического запуска тестов
+- Проверки на Windows, macOS, Linux
+- Автоматической установки зависимостей
+
+### Отладка
+Используйте флаг `-Verbose` для подробного вывода:
+```powershell
+$VerbosePreference = "Continue"
+./Complete-ArchiveProcess.ps1
+```
+
+## Поддержка и документация
+
+### Документация разработчика
+Подробная техническая документация в `CLAUDE.md`
+
+### Сообщение об ошибках
+1. Проверьте логи с флагом `-Verbose`
+2. Убедитесь в правильности конфигурации `config.json`
+3. Проверьте доступность Git репозитория
+
+### Контакты
+- Владелец репозитория: akrivopolenov@gmail.com
+- Проект: Архив Соломбальской верфи
