@@ -15,9 +15,9 @@ if ($env:PARENT_VERBOSE -eq "true") {
 
 Import-Module (Join-Path $PSScriptRoot "libs/ConvertText.psm1")  -Force
 Import-Module (Join-Path $PSScriptRoot "libs/PathHelper.psm1")   -Force
+Import-Module (Join-Path $PSScriptRoot "libs/ToolsHelper.psm1")  -Force
 Import-Module (Join-Path $PSScriptRoot "libs/ConvertImage.psm1") -Force
 Import-Module (Join-Path $PSScriptRoot "libs/JsonHelper.psm1")   -Force
-Import-Module (Join-Path $PSScriptRoot "libs/ToolsHelper.psm1")  -Force
 Import-Module (Join-Path $PSScriptRoot "libs/HashHelper.psm1")   -Force
 Import-Module (Join-Path $PSScriptRoot "libs/ScanFileHelper.psm1")  -Force
 
@@ -31,7 +31,7 @@ $FullResultPath = Test-RequiredPathsAndReturn $ResultPath $PSScriptRoot -ErrorMe
 $FullMetadataPath = Test-RequiredPathsAndReturn $MetadataDir $FullResultPath -ErrorMessage "Папка метаданных {0} не найдена"
 
 # Проверим доступность Blake3 (b3sum) для вычисления хешей
-Ensure-Blake3Available
+Ensure-Blake3Available | Out-Null
 
 # Обработка корневой папки, для каждой папки внутри прочитаем индекс
 # или создадим новый, если папка обрабатывается впервые
@@ -73,7 +73,13 @@ Get-ChildItem $FullSourcePath -Name  |
             ForEach-Object -Process {
                 # Контрольная сумма скана (Blake3)
                 # Испoльзуем ее как ключ в списке файлов (индексе)
+                $hashStartTime = Get-Date
                 $Blake3Hash = Get-Blake3Hash $_.FullName
+                $hashEndTime = Get-Date
+                $hashDuration = $hashEndTime - $hashStartTime
+                
+                Write-Verbose "Blake3 hash для $($_.Name): $($hashDuration.TotalMilliseconds.ToString("F2")) мс"
+                
                 $MaybeFileData = $CurrentDirIndex.Files.$Blake3Hash
 
                 Write-Verbose "Обработка оригинала чертежа: $($_.FullName)"
