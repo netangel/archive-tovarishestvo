@@ -1,4 +1,6 @@
-﻿function Convert-PdfToTiff {
+﻿Import-Module (Join-Path $PSScriptRoot "ToolsHelper.psm1") -Force
+
+function Convert-PdfToTiff {
     Param(
         # Input file object
         [Parameter(ValueFromPipelineByPropertyName)] 
