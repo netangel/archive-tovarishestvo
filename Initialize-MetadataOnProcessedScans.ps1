@@ -137,9 +137,24 @@ foreach ($SourceDir in $SourceDirectories) {
                 }
             }
             
-            # Create thumbnails data structure
-            $ThumbnailsData = [PSCustomObject]@{
-                400 = $TranslitFileName.Replace('.tif', '.png')  # Assuming thumbnail naming convention
+            # Create thumbnails data structure with file existence check
+            $ThumbnailsDir = Join-Path $ProcessedArchiveSubDir "Thumbnails"
+            $ThumbnailsData = [PSCustomObject]@{}
+            
+            # For multi-page files, use the actual PNG file name (with -0 suffix)
+            # For single-page files, use the standard TIF->PNG conversion
+            $ThumbnailFileName = if ($IsMultiPage) {
+                $ActualPngFile  # This already has the -0 suffix for multi-page files
+            } else {
+                $TranslitFileName.Replace('.tif', '.png')
+            }
+            
+            $ThumbnailPath = Join-Path $ThumbnailsDir $ThumbnailFileName
+            if (Test-Path $ThumbnailPath) {
+                $ThumbnailsData | Add-Member -NotePropertyName "400" -NotePropertyValue $ThumbnailFileName
+            } else {
+                Write-Warning "    Миниатюра не найдена: $ThumbnailFileName"
+                $Stats.Warnings++
             }
             
             # Create processed scan data structure
