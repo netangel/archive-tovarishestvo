@@ -36,6 +36,17 @@ if (-not (Test-Path $FullMetadataPath)) {
     Write-Host "Создана директория метаданных: $FullMetadataPath"
 }
 
+# Initialize counters for statistics
+$Stats = @{
+    ProcessedDirectories = 0
+    SkippedDirectories = 0
+    ProcessedFiles = 0
+    SkippedFiles = 0
+    MultiPageFiles = 0
+    Warnings = 0
+    Errors = 0
+}
+
 Write-Host "Начинается инициализация метаданных..."
 Write-Host "Исходные отсканированные файлы: $FullDoneScannnedPath"
 Write-Host "Обработанное содержимое архива: $FullArchiveContentPath"
@@ -53,6 +64,8 @@ foreach ($SourceDir in $SourceDirectories) {
     
     if (-not (Test-Path $ProcessedArchiveSubDir)) {
         Write-Warning "Не найден транслитерированный аналог для '$($SourceDir.Name)' (ожидается: '$TransliteratedDirName'). Пропускается."
+        $Stats.Warnings++
+        $Stats.SkippedDirectories++
         continue
     }
     
@@ -89,6 +102,8 @@ foreach ($SourceDir in $SourceDirectories) {
             # Check if TIF file exists
             if (-not (Test-Path $TifFilePath)) {
                 Write-Warning "    TIF файл не найден для '$($SourceFile.Name)' (ожидается: '$TranslitFileName'). Пропускается."
+                $Stats.Warnings++
+                $Stats.SkippedFiles++
                 continue
             }
             
@@ -112,9 +127,12 @@ foreach ($SourceDir in $SourceDirectories) {
                     $IsMultiPage = $true
                     $ActualPngFile = $MultiPagePngs[0].Name  # Use first page as main PNG
                     $PngFilePages = $MultiPagePngs | Select-Object -ExpandProperty Name
+                    $Stats.MultiPageFiles++
                     Write-Host "    ✓ Найдены обработанные файлы: $TranslitFileName, многостраничные PNG ($($MultiPagePngs.Count) страниц)" -ForegroundColor Green
                 } else {
                     Write-Warning "    PNG файлы не найдены для '$($SourceFile.Name)' (ожидается: '$PngFileName' или '$BaseNameForPng-N.png'). Пропускается."
+                    $Stats.Warnings++
+                    $Stats.SkippedFiles++
                     continue
                 }
             }
@@ -142,11 +160,14 @@ foreach ($SourceDir in $SourceDirectories) {
             
             # 1.5. Add processed scan data to directory metadata using original file hash as key
             $DirectoryMetadata.Files | Add-Member -NotePropertyName $OriginalFileHash -NotePropertyValue $ProcessedScanData
+            $Stats.ProcessedFiles++
             
             Write-Host "    ✓ Добавлены метаданные для файла" -ForegroundColor Green
         }
         catch {
             Write-Error "    Ошибка обработки файла '$($SourceFile.Name)': $_"
+            $Stats.Errors++
+            $Stats.SkippedFiles++
             continue
         }
     }
@@ -157,12 +178,41 @@ foreach ($SourceDir in $SourceDirectories) {
     
     try {
         $DirectoryMetadata | ConvertTo-Json -Depth 10 | Set-Content -Path $JsonFilePath -Encoding UTF8
+        $Stats.ProcessedDirectories++
         Write-Host "  ✓ Метаданные сохранены в: $JsonFileName" -ForegroundColor Green
         Write-Host "  Всего обработано файлов: $(($DirectoryMetadata.Files | Get-Member -MemberType NoteProperty).Count)"
     }
     catch {
         Write-Error "  Не удалось сохранить файл метаданных '$JsonFileName': $_"
+        $Stats.Errors++
     }
 }
 
 Write-Host "`nИнициализация метаданных завершена!" -ForegroundColor Green
+
+# Display final statistics
+Write-Host "`n" + "="*60
+Write-Host "СТАТИСТИКА ВЫПОЛНЕНИЯ" -ForegroundColor Cyan
+Write-Host "="*60
+
+Write-Host "Директории:" -ForegroundColor Yellow
+Write-Host "  • Обработано успешно: $($Stats.ProcessedDirectories)" -ForegroundColor Green
+Write-Host "  • Пропущено: $($Stats.SkippedDirectories)" -ForegroundColor Red
+Write-Host "  • Всего найдено: $($SourceDirectories.Count)"
+
+Write-Host "`nФайлы:" -ForegroundColor Yellow  
+Write-Host "  • Обработано успешно: $($Stats.ProcessedFiles)" -ForegroundColor Green
+Write-Host "  • Пропущено: $($Stats.SkippedFiles)" -ForegroundColor Red
+Write-Host "  • Многостраничные: $($Stats.MultiPageFiles)" -ForegroundColor Magenta
+
+Write-Host "`nОшибки и предупреждения:" -ForegroundColor Yellow
+Write-Host "  • Предупреждения: $($Stats.Warnings)" -ForegroundColor DarkYellow
+Write-Host "  • Ошибки: $($Stats.Errors)" -ForegroundColor Red
+
+$SuccessRate = if (($Stats.ProcessedFiles + $Stats.SkippedFiles) -gt 0) { 
+    [math]::Round(($Stats.ProcessedFiles / ($Stats.ProcessedFiles + $Stats.SkippedFiles)) * 100, 1) 
+} else { 0 }
+
+Write-Host "`nИтого:" -ForegroundColor Yellow
+Write-Host "  • Успешность обработки файлов: $SuccessRate%" -ForegroundColor $(if ($SuccessRate -ge 90) { "Green" } elseif ($SuccessRate -ge 70) { "Yellow" } else { "Red" })
+Write-Host "="*60
