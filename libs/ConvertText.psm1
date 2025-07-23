@@ -142,9 +142,17 @@ Function ConvertTo-Translit {
         [string] $InputString
     )
 
+    # Сначала обрабатываем случаи с комбинированными символами
+    # Заменяем и + объединённое бреве (U+0306) на стандартное й
+    $normalizedInput = $InputString -replace "и$([char]0x0306)", 'й'
+    $normalizedInput = $normalizedInput -replace "И$([char]0x0306)", 'Й'
+    # Заменяем е + объединённое умляут (U+0308) на стандартное ё  
+    $normalizedInput = $normalizedInput -replace "е$([char]0x0308)", 'ё'
+    $normalizedInput = $normalizedInput -replace "Е$([char]0x0308)", 'Ё'
+
     $Result = ''
 
-    foreach ($c in $InputString.ToCharArray())
+    foreach ($c in $normalizedInput.ToCharArray())
     {
         if ($Null -cne $Translit[$c] ) {
             $Result += $Translit[$c]
