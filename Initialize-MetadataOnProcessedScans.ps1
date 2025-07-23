@@ -15,47 +15,6 @@ Import-Module (Join-Path $PSScriptRoot "libs/HashHelper.psm1") -Force
 Import-Module (Join-Path $PSScriptRoot "libs/JsonHelper.psm1") -Force
 Import-Module (Join-Path $PSScriptRoot "libs/PathHelper.psm1") -Force
 
-<# 
-This script initializes the metadata JSON file based on
-files which have been already processed (historical data)
-
-The input parameters are:
-    * "DoneScannnedPath" directory path (relative or full) with scanned prints originals, either pdf or tif,
-        file names can be in Russian (un-formatted and un-processed)
-    * "ArchiveContentPath" directory path with result of previous version of script, with next configuration:
-        - transliterated sub-folder names
-        - transliterated scanned file names
-        - two formats of scanned files: tif (orininal pdf is converted into tif) and png (ligther version for browser preview)
-        - Thumbnails sub-directory with smaller (400px wide) variant of the scanned files,
-            thumbnail has the same name as the processed scan
-    * "MetadataPath" output directory where to store JSON metadata files structure
-
-The script does:
-
-1. read sub-directories in DoneScannnedPath, and for each:
-    1.1. Check if transliterated counterpart directory exists in ArchiveContentPath (transliteration function to be used is ConvertTo-Translit)
-            - yes: print Info with transliterated name, store full path for transliterated in ProcessedArchiveSubDir variable
-            - no: print warning and skip to the next sub-directory
-    1.2. Create an empty data structure similar as in Read-ResultDirectoryMetadata function
-    1.3. Read each scanned original hash code using Get-Blake3Hash 
-    1.4. similar to Convert-FileAndCreateData function:
-        - transliterate original name, check if transliterated filename exists in ProcessedArchiveSubDir, both for tif and png variants
-            - yes: print Info with transliterated filename
-            - no: skip to the next original scan
-        - create and return data structure which describes the processed scan, in the form:
-            [PSCustomObject]@{
-                ResultFileName = $TranslitFileName
-                OriginalName   = $SourceFile.Name
-                PngFile        = $pngFile
-                MultiPage      = $false
-                Tags           = Get-TagsFromName $SourceFile.BaseName
-                Year           = Get-YearFromFilename $SourceFile.BaseName
-                Thumbnails     = Get-Thumbnails $OutputFileName
-            }
-            - for tags, year generation function use the original scan file name
-    1.5. add checked processed scan data structure in the directory data structure under the key = original file hash
-    1.6. save directory metadata under <transliterated name>.json at MetadataPath 
-#>
 
 # Ensure Blake3 is available
 Ensure-Blake3Available | Out-Null
@@ -74,30 +33,30 @@ if (Test-IsFullPath $MetadataPath) {
 # Create metadata directory if it doesn't exist
 if (-not (Test-Path $FullMetadataPath)) {
     New-Item -ItemType Directory -Path $FullMetadataPath -Force | Out-Null
-    Write-Host "Created metadata directory: $FullMetadataPath"
+    Write-Host "Создана директория метаданных: $FullMetadataPath"
 }
 
-Write-Host "Starting metadata initialization..."
-Write-Host "Source scanned files: $FullDoneScannnedPath"
-Write-Host "Processed archive content: $FullArchiveContentPath"
-Write-Host "Metadata output: $FullMetadataPath"
+Write-Host "Начинается инициализация метаданных..."
+Write-Host "Исходные отсканированные файлы: $FullDoneScannnedPath"
+Write-Host "Обработанное содержимое архива: $FullArchiveContentPath"
+Write-Host "Вывод метаданных: $FullMetadataPath"
 
 # Get all subdirectories in DoneScannnedPath
 $SourceDirectories = Get-ChildItem -Path $FullDoneScannnedPath -Directory
 
 foreach ($SourceDir in $SourceDirectories) {
-    Write-Host "`nProcessing directory: $($SourceDir.Name)"
+    Write-Host "`nОбработка директории: $($SourceDir.Name)"
     
     # 1.1. Check if transliterated counterpart directory exists
     $TransliteratedDirName = ConvertTo-Translit $SourceDir.Name
     $ProcessedArchiveSubDir = Join-Path $FullArchiveContentPath $TransliteratedDirName
     
     if (-not (Test-Path $ProcessedArchiveSubDir)) {
-        Write-Warning "No transliterated counterpart found for '$($SourceDir.Name)' (expected: '$TransliteratedDirName'). Skipping."
+        Write-Warning "Не найден транслитерированный аналог для '$($SourceDir.Name)' (ожидается: '$TransliteratedDirName'). Пропускается."
         continue
     }
     
-    Write-Host "  ✓ Found processed directory: $TransliteratedDirName" -ForegroundColor Green
+    Write-Host "  ✓ Найдена обработанная директория: $TransliteratedDirName" -ForegroundColor Green
     
     # 1.2. Create empty data structure similar to Read-ResultDirectoryMetadata
     $DirectoryMetadata = [PSCustomObject]@{
@@ -110,10 +69,10 @@ foreach ($SourceDir in $SourceDirectories) {
     # Get all scanned files in source directory (pdf and tif)
     $SourceFiles = Get-ChildItem -Path $SourceDir.FullName -File | Where-Object { $_.Extension -in @('.pdf', '.tif') }
     
-    Write-Host "  Found $($SourceFiles.Count) scanned files to process"
+    Write-Host "  Найдено $($SourceFiles.Count) отсканированных файлов для обработки"
     
     foreach ($SourceFile in $SourceFiles) {
-        Write-Host "    Processing file: $($SourceFile.Name)"
+        Write-Host "    Обработка файла: $($SourceFile.Name)"
         
         try {
             # 1.3. Get Blake3 hash of original file
@@ -128,11 +87,11 @@ foreach ($SourceDir in $SourceDirectories) {
             $PngFilePath = Join-Path $ProcessedArchiveSubDir $PngFileName
             
             if (-not (Test-Path $TifFilePath) -or -not (Test-Path $PngFilePath)) {
-                Write-Warning "    Processed files not found for '$($SourceFile.Name)' (expected: '$TranslitFileName' and '$PngFileName'). Skipping."
+                Write-Warning "    Обработанные файлы не найдены для '$($SourceFile.Name)' (ожидается: '$TranslitFileName' и '$PngFileName'). Пропускается."
                 continue
             }
             
-            Write-Host "    ✓ Found processed files: $TranslitFileName, $PngFileName" -ForegroundColor Green
+            Write-Host "    ✓ Найдены обработанные файлы: $TranslitFileName, $PngFileName" -ForegroundColor Green
             
             # Create thumbnails data structure
             $ThumbnailsData = [PSCustomObject]@{
@@ -153,10 +112,10 @@ foreach ($SourceDir in $SourceDirectories) {
             # 1.5. Add processed scan data to directory metadata using original file hash as key
             $DirectoryMetadata.Files | Add-Member -NotePropertyName $OriginalFileHash -NotePropertyValue $ProcessedScanData
             
-            Write-Host "    ✓ Added metadata for file" -ForegroundColor Green
+            Write-Host "    ✓ Добавлены метаданные для файла" -ForegroundColor Green
         }
         catch {
-            Write-Error "    Error processing file '$($SourceFile.Name)': $_"
+            Write-Error "    Ошибка обработки файла '$($SourceFile.Name)': $_"
             continue
         }
     }
@@ -167,12 +126,12 @@ foreach ($SourceDir in $SourceDirectories) {
     
     try {
         $DirectoryMetadata | ConvertTo-Json -Depth 10 | Set-Content -Path $JsonFilePath -Encoding UTF8
-        Write-Host "  ✓ Saved metadata to: $JsonFileName" -ForegroundColor Green
-        Write-Host "  Total files processed: $(($DirectoryMetadata.Files | Get-Member -MemberType NoteProperty).Count)"
+        Write-Host "  ✓ Метаданные сохранены в: $JsonFileName" -ForegroundColor Green
+        Write-Host "  Всего обработано файлов: $(($DirectoryMetadata.Files | Get-Member -MemberType NoteProperty).Count)"
     }
     catch {
-        Write-Error "  Failed to save metadata file '$JsonFileName': $_"
+        Write-Error "  Не удалось сохранить файл метаданных '$JsonFileName': $_"
     }
 }
 
-Write-Host "`nMetadata initialization completed!" -ForegroundColor Green
+Write-Host "`nИнициализация метаданных завершена!" -ForegroundColor Green

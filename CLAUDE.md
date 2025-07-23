@@ -32,6 +32,12 @@ Invoke-Pester ./tests/
 ./Sync-MetadataGitRepo.ps1 -GitDirectory "path/to/git" -UpstreamUrl "git@gitlab.com:solombala-archive/metadata.git" -BranchName "branch-name"
 ```
 
+### Historical Data Processing
+```powershell
+# Initialize metadata from already processed scans (historical data)
+./Initialize-MetadataOnProcessedScans.ps1 -DoneScannnedPath "path/to/original/scans" -ArchiveContentPath "path/to/processed/archive" -MetadataPath "path/to/metadata/output"
+```
+
 ### GitLab Integration
 ```powershell
 # Create merge request for processed results
@@ -56,6 +62,7 @@ Invoke-Pester ./tests/
 - `ConvertTo-ZolaContent.ps1` - Generates Zola static site content from metadata
 - `Sync-MetadataGitRepo.ps1` - Manages Git repository state and branching
 - `Submit-MetadataToRemote.ps1` - Commits and pushes metadata changes
+- `Initialize-MetadataOnProcessedScans.ps1` - Initializes metadata JSON files from already processed historical data
 
 ### Library Modules (libs/)
 
@@ -106,6 +113,35 @@ Invoke-Pester ./tests/
 - GitLab CLI or API access (for merge request creation)
 - Blake3 (`b3sum` command-line tool for file hashing - auto-installed if missing)
 - Pester (for running tests)
+
+## Script Details
+
+### Initialize-MetadataOnProcessedScans.ps1
+
+This script initializes metadata JSON files based on files that have been already processed (historical data). It's used to create metadata for existing processed archives.
+
+**Parameters:**
+- `DoneScannnedPath` - Directory with original scanned files (PDF/TIFF), filenames can be in Russian (un-formatted)
+- `ArchiveContentPath` - Directory with results from previous processing containing:
+  - Transliterated sub-folder names
+  - Transliterated scanned file names
+  - Two formats: TIF (original converted) and PNG (browser preview)
+  - Thumbnails sub-directory with 400px wide variants
+- `MetadataPath` - Output directory for JSON metadata files
+
+**Processing Logic:**
+1. **Directory Processing**: For each subdirectory in `DoneScannnedPath`:
+   - Checks if transliterated counterpart exists in `ArchiveContentPath` using `ConvertTo-Translit`
+   - Creates empty metadata structure similar to `Read-ResultDirectoryMetadata`
+   
+2. **File Processing**: For each scanned original file:
+   - Calculates Blake3 hash using `Get-Blake3Hash`
+   - Transliterates original filename and checks for TIF/PNG variants in processed directory
+   - Creates data structure with: `ResultFileName`, `OriginalName`, `PngFile`, `MultiPage`, `Tags`, `Year`, `Thumbnails`
+   - Uses original scan filename for tags and year extraction
+   - Adds processed scan data to directory metadata using original file hash as key
+   
+3. **Output**: Saves directory metadata as `<transliterated-name>.json` in `MetadataPath`
 
 ## Important Notes
 

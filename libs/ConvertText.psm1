@@ -142,11 +142,11 @@ Function ConvertTo-Translit {
         [string] $InputString
     )
 
-    # First, handle common combined character cases
-    # Replace и + combining breve (U+0306) with standard й
+    # Сначала обрабатываем случаи с комбинированными символами
+    # Заменяем и + объединённое бреве (U+0306) на стандартное й
     $normalizedInput = $InputString -replace "и$([char]0x0306)", 'й'
     $normalizedInput = $normalizedInput -replace "И$([char]0x0306)", 'Й'
-    # Replace е + combining diaeresis (U+0308) with standard ё  
+    # Заменяем е + объединённое умляут (U+0308) на стандартное ё  
     $normalizedInput = $normalizedInput -replace "е$([char]0x0308)", 'ё'
     $normalizedInput = $normalizedInput -replace "Е$([char]0x0308)", 'Ё'
 
