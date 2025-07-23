@@ -86,12 +86,38 @@ foreach ($SourceDir in $SourceDirectories) {
             $TifFilePath = Join-Path $ProcessedArchiveSubDir $TranslitFileName
             $PngFilePath = Join-Path $ProcessedArchiveSubDir $PngFileName
             
-            if (-not (Test-Path $TifFilePath) -or -not (Test-Path $PngFilePath)) {
-                Write-Warning "    Обработанные файлы не найдены для '$($SourceFile.Name)' (ожидается: '$TranslitFileName' и '$PngFileName'). Пропускается."
+            # Check if TIF file exists
+            if (-not (Test-Path $TifFilePath)) {
+                Write-Warning "    TIF файл не найден для '$($SourceFile.Name)' (ожидается: '$TranslitFileName'). Пропускается."
                 continue
             }
             
-            Write-Host "    ✓ Найдены обработанные файлы: $TranslitFileName, $PngFileName" -ForegroundColor Green
+            # Initialize variables for multi-page detection
+            $IsMultiPage = $false
+            $PngFilePages = @()
+            $ActualPngFile = $PngFileName
+            
+            # Check for single PNG file first
+            if (Test-Path $PngFilePath) {
+                # Single page case
+                Write-Host "    ✓ Найдены обработанные файлы: $TranslitFileName, $PngFileName" -ForegroundColor Green
+            } else {
+                # Check for multi-page PNG files (filename-0.png, filename-1.png, etc.)
+                $BaseNameForPng = (ConvertTo-Translit $SourceFile.BaseName)
+                $MultiPagePngs = Get-ChildItem -Path $ProcessedArchiveSubDir -File | 
+                    Where-Object { $_.Name -match "^$([regex]::Escape($BaseNameForPng))-\d+\.png$" } |
+                    Sort-Object Name
+                
+                if ($MultiPagePngs.Count -gt 0) {
+                    $IsMultiPage = $true
+                    $ActualPngFile = $MultiPagePngs[0].Name  # Use first page as main PNG
+                    $PngFilePages = $MultiPagePngs | Select-Object -ExpandProperty Name
+                    Write-Host "    ✓ Найдены обработанные файлы: $TranslitFileName, многостраничные PNG ($($MultiPagePngs.Count) страниц)" -ForegroundColor Green
+                } else {
+                    Write-Warning "    PNG файлы не найдены для '$($SourceFile.Name)' (ожидается: '$PngFileName' или '$BaseNameForPng-N.png'). Пропускается."
+                    continue
+                }
+            }
             
             # Create thumbnails data structure
             $ThumbnailsData = [PSCustomObject]@{
@@ -102,11 +128,16 @@ foreach ($SourceDir in $SourceDirectories) {
             $ProcessedScanData = [PSCustomObject]@{
                 ResultFileName = $TranslitFileName
                 OriginalName   = $SourceFile.Name
-                PngFile        = $PngFileName
-                MultiPage      = $false
+                PngFile        = $ActualPngFile
+                MultiPage      = $IsMultiPage
                 Tags           = Get-TagsFromName $SourceFile.BaseName
                 Year           = Get-YearFromFilename $SourceFile.BaseName
                 Thumbnails     = $ThumbnailsData
+            }
+            
+            # Add PngFilePages array if it's a multi-page file
+            if ($IsMultiPage) {
+                $ProcessedScanData | Add-Member -NotePropertyName "PngFilePages" -NotePropertyValue $PngFilePages
             }
             
             # 1.5. Add processed scan data to directory metadata using original file hash as key

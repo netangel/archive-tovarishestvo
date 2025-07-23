@@ -136,8 +136,12 @@ This script initializes metadata JSON files based on files that have been alread
    
 2. **File Processing**: For each scanned original file:
    - Calculates Blake3 hash using `Get-Blake3Hash`
-   - Transliterates original filename and checks for TIF/PNG variants in processed directory
+   - Transliterates original filename and checks for TIF file in processed directory
+   - Detects single-page vs multi-page scenarios:
+     - **Single-page**: Looks for `filename.png`
+     - **Multi-page**: Looks for `filename-0.png`, `filename-1.png`, etc.
    - Creates data structure with: `ResultFileName`, `OriginalName`, `PngFile`, `MultiPage`, `Tags`, `Year`, `Thumbnails`
+   - For multi-page files: adds `PngFilePages` array with all page filenames, sets `MultiPage: true`, uses first page as main `PngFile`
    - Uses original scan filename for tags and year extraction
    - Adds processed scan data to directory metadata using original file hash as key
    
