@@ -191,9 +191,8 @@ foreach ($SourceDir in $SourceDirectories) {
 Write-Host "`nИнициализация метаданных завершена!" -ForegroundColor Green
 
 # Display final statistics
-Write-Host "`n" + "="*60
+Write-Host "`n"
 Write-Host "СТАТИСТИКА ВЫПОЛНЕНИЯ" -ForegroundColor Cyan
-Write-Host "="*60
 
 Write-Host "Директории:" -ForegroundColor Yellow
 Write-Host "  • Обработано успешно: $($Stats.ProcessedDirectories)" -ForegroundColor Green
@@ -215,4 +214,3 @@ $SuccessRate = if (($Stats.ProcessedFiles + $Stats.SkippedFiles) -gt 0) {
 
 Write-Host "`nИтого:" -ForegroundColor Yellow
 Write-Host "  • Успешность обработки файлов: $SuccessRate%" -ForegroundColor $(if ($SuccessRate -ge 90) { "Green" } elseif ($SuccessRate -ge 70) { "Yellow" } else { "Red" })
-Write-Host "="*60
