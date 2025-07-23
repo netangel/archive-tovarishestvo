@@ -126,7 +126,7 @@ foreach ($SourceDir in $SourceDirectories) {
                 if ($MultiPagePngs.Count -gt 0) {
                     $IsMultiPage = $true
                     $ActualPngFile = $MultiPagePngs[0].Name  # Use first page as main PNG
-                    $PngFilePages = $MultiPagePngs | Select-Object -ExpandProperty Name
+                    $PngFilePages = $MultiPagePngs | Select-Object -Skip 1 -ExpandProperty Name  # Exclude 0th page
                     $Stats.MultiPageFiles++
                     Write-Host "    ✓ Найдены обработанные файлы: $TranslitFileName, многостраничные PNG ($($MultiPagePngs.Count) страниц)" -ForegroundColor Green
                 } else {
