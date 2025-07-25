@@ -1,16 +1,17 @@
 stages:
-  - build-and-deploy
+  - build
+  - deploy
 
 variables:
   ZOLA_VERSION: "0.20.0"
   TEMPLATES_REPO: "netangel/solombala-shipyard-archive-site"
   SCRIPTS_REPO: "netangel/archive-tovarishestvo"
-  S3_ENDPOINT: "se-sto-1.linodeobjects.com"
-  S3_BUCKET: "schooner-archive-v2"
+  # Custom domain for the site (leave empty to use GitLab default)
+  CUSTOM_DOMAIN: "archive-v2.seapractic.ru"
   GIT_SUBMODULE_STRATEGY: none
 
-build-and-deploy:
-  stage: build-and-deploy
+build-site:
+  stage: build
   image: ubuntu:latest
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
@@ -18,7 +19,7 @@ build-and-deploy:
   before_script:
     # Update package list and install dependencies
     - apt-get update -qq
-    - apt-get install -y curl tar sudo git openssh-client s3cmd wget
+    - apt-get install -y curl tar sudo git openssh-client wget
     # Install PowerShell
     - wget -q https://packages.microsoft.com/config/ubuntu/20.04/packages-microsoft-prod.deb
     - dpkg -i packages-microsoft-prod.deb
@@ -42,26 +43,123 @@ build-and-deploy:
     - echo "Running PowerShell conversion script"
     - pwsh -File "./scripts/ConvertTo-ZolaContent.ps1" -MetadataPath "./" -ZolaContentPath "./template/content"
     
-    # Build Zola site
+    # Configure base URL based on custom domain or GitLab default
     - cd template
+    - |
+      if [ -n "$CUSTOM_DOMAIN" ]; then
+        echo "Configuring Zola for custom domain: $CUSTOM_DOMAIN"
+        sed -i "s|base_url = .*|base_url = \"https://$CUSTOM_DOMAIN\"|" config.toml
+      else
+        echo "Using GitLab Pages default domain"
+        sed -i "s|base_url = .*|base_url = \"https://${CI_PROJECT_NAMESPACE}.gitlab.io/${CI_PROJECT_NAME}\"|" config.toml
+      fi
+    - echo "Current Zola configuration:"
+    - head -10 config.toml
+    
+    # Build Zola site
     - zola build
+    
+    # Create CNAME file for custom domain if specified
+    - |
+      if [ -n "$CUSTOM_DOMAIN" ]; then
+        echo "Creating CNAME file for custom domain"
+        echo "$CUSTOM_DOMAIN" > public/CNAME
+      fi
+    
     - cd ..
     
-    # Configure s3cmd
-    - |
-      cat > ~/.s3cfg << EOF
-      [default]
-      access_key = $LINODE_BUCKET_ACCESS_KEY_ID
-      secret_key = $LINODE_BUCKET_SECRET_ACCESS_KEY
-      host_base = $S3_ENDPOINT
-      host_bucket = %(bucket)s.$S3_ENDPOINT
-      use_https = True
-      EOF
+    # Copy public folder for GitLab Pages deployment
+    - cp -r ./template/public .
     
-    # Upload to Linode Objects
+  artifacts:
+    paths:
+      - public/
+    expire_in: 1 week
+
+# GitLab Pages deployment job (required name: "pages")
+pages:
+  stage: deploy
+  image: alpine:latest
+  dependencies:
+    - build-site
+  script:
+    # Display deployment information
     - |
-      s3cmd sync --acl-public \
-        --no-mime-magic \
-        --guess-mime-type \
-        ./template/public/ s3://$S3_BUCKET/
-      
+      echo "🚀 Deploying to GitLab Pages..."
+      echo ""
+      if [ -n "$CUSTOM_DOMAIN" ]; then
+        echo "🌐 Site URLs:"
+        echo "   Custom domain: https://$CUSTOM_DOMAIN"
+        echo "   GitLab Pages: https://${CI_PROJECT_NAMESPACE}.gitlab.io/${CI_PROJECT_NAME}"
+        echo ""
+        echo "⚠️  Custom domain setup required:"
+        echo "   1. Add domain in GitLab: Deploy > Pages > New Domain"
+        echo "   2. Configure DNS records:"
+        echo "      - CNAME: $CUSTOM_DOMAIN -> ${CI_PROJECT_NAMESPACE}.gitlab.io"
+        echo "      - TXT: _gitlab-pages-verification-code.$CUSTOM_DOMAIN (from GitLab)"
+        echo "   3. Wait for DNS propagation (up to 24 hours)"
+      else
+        echo "🌐 GitLab Pages: https://${CI_PROJECT_NAMESPACE}.gitlab.io/${CI_PROJECT_NAME}"
+        echo ""
+        echo "💡 To enable custom domain:"
+        echo "   Set CUSTOM_DOMAIN variable in CI/CD settings"
+      fi
+  artifacts:
+    paths:
+      - public/
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+
+# Optional: Manual domain verification job
+verify-domain:
+  stage: deploy
+  image: ubuntu:latest
+  script:
+    - apt-get update -qq && apt-get install -y dnsutils curl
+    - |
+      if [ -n "$CUSTOM_DOMAIN" ]; then
+        echo "🔍 Verifying custom domain configuration for: $CUSTOM_DOMAIN"
+        echo ""
+        
+        # Check if domain resolves
+        echo "Checking DNS resolution..."
+        if dig +short A "$CUSTOM_DOMAIN" | grep -q .; then
+          echo "✅ Domain resolves to: $(dig +short A "$CUSTOM_DOMAIN")"
+        else
+          echo "❌ Domain does not resolve"
+        fi
+        
+        # Check CNAME record
+        CNAME_RESULT=$(dig +short CNAME "$CUSTOM_DOMAIN")
+        if [ -n "$CNAME_RESULT" ]; then
+          echo "✅ CNAME record found: $CNAME_RESULT"
+        else
+          echo "⚠️  No CNAME record found"
+        fi
+        
+        # Check verification TXT record
+        echo ""
+        echo "Checking GitLab verification record..."
+        TXT_RESULT=$(dig +short TXT "_gitlab-pages-verification-code.$CUSTOM_DOMAIN")
+        if [ -n "$TXT_RESULT" ]; then
+          echo "✅ Verification TXT record found: $TXT_RESULT"
+        else
+          echo "❌ No verification TXT record found"
+          echo "💡 Add TXT record: _gitlab-pages-verification-code.$CUSTOM_DOMAIN"
+        fi
+        
+        # Test custom domain connectivity
+        echo ""
+        echo "Testing custom domain connectivity..."
+        if curl -f -s -o /dev/null "https://$CUSTOM_DOMAIN"; then
+          echo "✅ Custom domain is accessible"
+        else
+          echo "⚠️  Custom domain not yet accessible"
+        fi
+      else
+        echo "ℹ️  No custom domain configured"
+        echo "💡 Set CUSTOM_DOMAIN variable to enable custom domain support"
+      fi
+  when: manual
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
