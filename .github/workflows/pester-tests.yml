@@ -11,26 +11,6 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-     
-      - name: Install Blake3 (b3sum)
-        shell: pwsh
-        run: |
-          # Download b3sum binary directly from GitHub releases
-          $version = "1.8.2"
-          $url = "https://github.com/BLAKE3-team/BLAKE3/releases/download/$version/b3sum_windows_x64_bin.exe"
-          $destPath = "C:\b3sum"
-          $exePath = "$destPath\b3sum.exe"
-          
-          Write-Host "Downloading b3sum $version binary..."
-          New-Item -ItemType Directory -Path $destPath -Force | Out-Null
-          Invoke-WebRequest -Uri $url -OutFile $exePath
-          
-          # Add to GitHub Actions PATH for subsequent steps
-          echo "$destPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          
-          # Verify installation
-          & $exePath --version
-          Write-Host "b3sum installed successfully"
           
       - name: Install Pester
         shell: pwsh
