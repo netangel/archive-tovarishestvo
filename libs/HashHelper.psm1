@@ -25,4 +25,21 @@ function Convert-StringToMD5 {
     }
 }
 
-Export-ModuleMember -Function Convert-StringToMD5 
+function Get-DirectoryFileHash {
+    param (
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string]$DirectoryName,
+        
+        [Parameter(Mandatory=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string]$FileName
+    )
+    
+    # Use pipe symbol | as separator since it's not allowed in Windows/Unix filenames
+    # Format: |DirectoryName|FileName|
+    $combinedString = "|$DirectoryName|$FileName|"
+    return Convert-StringToMD5 -StringToHash $combinedString
+}
+
+Export-ModuleMember -Function Convert-StringToMD5, Get-DirectoryFileHash 

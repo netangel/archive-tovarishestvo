@@ -116,6 +116,71 @@ Describe 'Convert-StringToMD5 Function Tests' {
         }
     }
     
+    Context 'Get-DirectoryFileHash Helper Function' {
+        It 'Should generate MD5 hash for directory and file combination' {
+            $result = Get-DirectoryFileHash -DirectoryName "Folder1" -FileName "document.pdf"
+            
+            $result.Length | Should -Be 32
+            $result | Should -Match '^[A-F0-9]{32}$'
+        }
+        
+        It 'Should handle Cyrillic directory and file names' {
+            $result = Get-DirectoryFileHash -DirectoryName "Папка документов" -FileName "скан001.pdf"
+            
+            $result.Length | Should -Be 32
+            $result | Should -Match '^[A-F0-9]{32}$'
+        }
+        
+        It 'Should generate consistent hash for same input' {
+            $result1 = Get-DirectoryFileHash -DirectoryName "TestDir" -FileName "test.txt"
+            $result2 = Get-DirectoryFileHash -DirectoryName "TestDir" -FileName "test.txt"
+            
+            $result1 | Should -Be $result2
+        }
+        
+        It 'Should generate different hashes for different directories with same file' {
+            $hash1 = Get-DirectoryFileHash -DirectoryName "Folder1" -FileName "document.pdf"
+            $hash2 = Get-DirectoryFileHash -DirectoryName "Folder2" -FileName "document.pdf"
+            
+            $hash1 | Should -Not -Be $hash2
+        }
+        
+        It 'Should generate different hashes for same directory with different files' {
+            $hash1 = Get-DirectoryFileHash -DirectoryName "Folder1" -FileName "document1.pdf"
+            $hash2 = Get-DirectoryFileHash -DirectoryName "Folder1" -FileName "document2.pdf"
+            
+            $hash1 | Should -Not -Be $hash2
+        }
+        
+        It 'Should use pipe separators format |DirectoryName|FileName|' {
+            # Test that the function uses the expected format internally
+            $directoryName = "TestDir"
+            $fileName = "test.txt"
+            $expectedString = "|$directoryName|$fileName|"
+            
+            $hashFromHelper = Get-DirectoryFileHash -DirectoryName $directoryName -FileName $fileName
+            $hashFromDirect = Convert-StringToMD5 -StringToHash $expectedString
+            
+            $hashFromHelper | Should -Be $hashFromDirect
+        }
+        
+        It 'Should throw error for empty directory name' {
+            { Get-DirectoryFileHash -DirectoryName "" -FileName "test.txt" } | Should -Throw
+        }
+        
+        It 'Should throw error for empty file name' {
+            { Get-DirectoryFileHash -DirectoryName "TestDir" -FileName "" } | Should -Throw
+        }
+        
+        It 'Should throw error for null directory name' {
+            { Get-DirectoryFileHash -DirectoryName $null -FileName "test.txt" } | Should -Throw
+        }
+        
+        It 'Should throw error for null file name' {
+            { Get-DirectoryFileHash -DirectoryName "TestDir" -FileName $null } | Should -Throw
+        }
+    }
+    
     Context 'Parameter Validation' {
         It 'Should throw error for null input' {
             { Convert-StringToMD5 -StringToHash $null } | Should -Throw

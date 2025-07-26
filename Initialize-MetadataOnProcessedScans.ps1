@@ -87,7 +87,7 @@ foreach ($SourceDir in $SourceDirectories) {
         
         try {
             # 1.3. Get MD5 hash of original file
-            $OriginalFileHash = Convert-StringToMD5 "Directory:$($SourceDir.Name),File:$($SourceFile.Name)"
+            $OriginalFileHash = Get-DirectoryFileHash -DirectoryName $SourceDir.Name -FileName $SourceFile.Name
             Write-Verbose "    MD5 hash: $OriginalFileHash"
             
             # 1.4. Check if transliterated files exist in processed directory

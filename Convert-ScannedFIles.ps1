@@ -72,7 +72,7 @@ Get-ChildItem $FullSourcePath -Name  |
                 # Контрольная сумма скана (MD5)
                 # Считаем для строки "Имя папки" + "Имя файла"
                 # Испoльзуем ее как ключ в списке файлов (индексе)
-                $MD5Hash = Convert-StringToMD5 "Directory:$($CurrentDirIndex.OriginalName),File:$($_.FullName)"
+                $MD5Hash = Get-DirectoryFileHash -DirectoryName $CurrentDirIndex.OriginalName -FileName $_.FullName
                
                 # Попробуем найти данные для файла в метаданных
                 $MaybeFileData = $CurrentDirIndex.Files.$MD5Hash
