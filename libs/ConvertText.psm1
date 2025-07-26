@@ -135,7 +135,7 @@
     [char]'Ю' = "Yu"
     [char]'я' = "ya"
     [char]'Я' = "Ya"
-    [char]'№' = "Ya"
+    [char]'№' = "N"
 }
 
 Function ConvertTo-Translit {
