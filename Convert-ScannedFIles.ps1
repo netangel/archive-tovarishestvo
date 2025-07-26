@@ -30,8 +30,6 @@ $FullResultPath = Test-RequiredPathsAndReturn $ResultPath $PSScriptRoot -ErrorMe
 # Проверим, если папка с метаданными существует
 $FullMetadataPath = Test-RequiredPathsAndReturn $MetadataDir $FullResultPath -ErrorMessage "Папка метаданных {0} не найдена"
 
-# Проверим доступность Blake3 (b3sum) для вычисления хешей
-Ensure-Blake3Available | Out-Null
 
 # Обработка корневой папки, для каждой папки внутри прочитаем индекс
 # или создадим новый, если папка обрабатывается впервые
@@ -71,17 +69,13 @@ Get-ChildItem $FullSourcePath -Name  |
         Get-ChildItem (Join-Path $FullSourcePath $CurrentDirIndex.OriginalName) -File |
             Where-Object { $_.Extension -match '\.(tiff?|pdf)$' } |
             ForEach-Object -Process {
-                # Контрольная сумма скана (Blake3)
+                # Контрольная сумма скана (MD5)
                 # Считаем для строки "Имя папки" + "Имя файла"
                 # Испoльзуем ее как ключ в списке файлов (индексе)
-                $hashStartTime = Get-Date
-                $Blake3Hash = Convert-StringToMD5 "Directory:$($CurrentDirIndex.OriginalName),File:$($_.FullName)"
-                $hashEndTime = Get-Date
-                $hashDuration = $hashEndTime - $hashStartTime
-                
-                Write-Verbose "Blake3 hash для $($_.Name): $($hashDuration.TotalMilliseconds.ToString("F2")) мс"
-                
-                $MaybeFileData = $CurrentDirIndex.Files.$Blake3Hash
+                $MD5Hash = Convert-StringToMD5 "Directory:$($CurrentDirIndex.OriginalName),File:$($_.FullName)"
+               
+                # Попробуем найти данные для файла в метаданных
+                $MaybeFileData = $CurrentDirIndex.Files.$MD5Hash
 
                 Write-Verbose "Обработка оригинала чертежа: $($_.FullName)"
                 
@@ -92,7 +86,7 @@ Get-ChildItem $FullSourcePath -Name  |
                 $UpdatedFiledData = Repair-MultiPngReference -FileData $FileData -FullCurrentDirPath $FullCurrentDirPath
 
                 # Добавим метаданные в индекс
-                $CurrentDirIndex.Files | Add-Member -MemberType NoteProperty -Name $Blake3Hash -Value $UpdatedFiledData -Force
+                $CurrentDirIndex.Files | Add-Member -MemberType NoteProperty -Name $MD5Hash -Value $UpdatedFiledData -Force
             }
         
         # Сохраним индекс в JSON файл в папке с результатами

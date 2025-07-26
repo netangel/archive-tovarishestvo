@@ -75,7 +75,7 @@ Invoke-Pester ./tests/
 - `ConvertImage.psm1` - Image conversion and optimization
 - `ConvertText.psm1` - Text processing and transliteration
 - `ToolsHelper.psm1` - System tool validation and utilities
-- `HashHelper.psm1` - Blake3 hash generation for file indexing
+- `HashHelper.psm1` - MD5 hash generation for file indexing
 
 ### Configuration
 
@@ -111,7 +111,6 @@ Invoke-Pester ./tests/
 - Git (for metadata repository management)
 - ImageMagick or similar (for image conversion)
 - GitLab CLI or API access (for merge request creation)
-- Blake3 (`b3sum` command-line tool for file hashing - auto-installed if missing)
 - Pester (for running tests)
 
 ## Script Details
@@ -135,7 +134,7 @@ This script initializes metadata JSON files based on files that have been alread
    - Creates empty metadata structure similar to `Read-ResultDirectoryMetadata`
    
 2. **File Processing**: For each scanned original file:
-   - Calculates Blake3 hash using `Get-Blake3Hash`
+   - Calculates MD5 hash using `Convert-StringToMD5`
    - Transliterates original filename and checks for TIF file in processed directory
    - Detects single-page vs multi-page scenarios:
      - **Single-page**: Looks for `filename.png`
@@ -150,9 +149,8 @@ This script initializes metadata JSON files based on files that have been alread
 ## Important Notes
 
 - All file paths are resolved through `PathHelper.psm1` functions (supports Windows UNC network paths)
-- The system uses Blake3 hashing instead of MD5 for file indexing (faster and more secure)
+- The system uses MD5 hashing for file indexing
 - The system uses transliteration for filename normalization
 - Git operations are handled through custom `GitHelper.psm1` wrapper
 - Metadata is stored in JSON format and versioned through Git
 - The system generates timestamped branches for each processing run
-- Blake3 (`b3sum`) is automatically installed on first run if not present

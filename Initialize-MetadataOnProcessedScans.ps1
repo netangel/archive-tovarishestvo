@@ -16,8 +16,6 @@ Import-Module (Join-Path $PSScriptRoot "libs/JsonHelper.psm1") -Force
 Import-Module (Join-Path $PSScriptRoot "libs/PathHelper.psm1") -Force
 
 
-# Ensure Blake3 is available
-Ensure-Blake3Available | Out-Null
 
 # Convert paths to full paths and validate
 $FullDoneScannnedPath = Test-RequiredPathsAndReturn -SourcePath $DoneScannnedPath $PSScriptRoot -ErrorMessage "DoneScannnedPath не найдена: {0}"
@@ -88,9 +86,9 @@ foreach ($SourceDir in $SourceDirectories) {
         Write-Host "    Обработка файла: $($SourceFile.Name)"
         
         try {
-            # 1.3. Get Blake3 hash of original file
+            # 1.3. Get MD5 hash of original file
             $OriginalFileHash = Convert-StringToMD5 "Directory:$($SourceDir.Name),File:$($SourceFile.Name)"
-            Write-Verbose "    Blake3 hash: $OriginalFileHash"
+            Write-Verbose "    MD5 hash: $OriginalFileHash"
             
             # 1.4. Check if transliterated files exist in processed directory
             $TranslitFileName = (ConvertTo-Translit $SourceFile.BaseName) + '.tif'
