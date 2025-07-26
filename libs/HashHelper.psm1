@@ -82,11 +82,11 @@ function Install-Blake3 {
 function Get-Blake3Hash {
     param (
         [Parameter(Mandatory=$true)]
-        [string]$FilePath
+        [string]$StringToHash
     )
     
-    if (-not (Test-Path $FilePath)) {
-        throw "Файл не найден: $FilePath"
+    if ([string]::IsNullOrWhiteSpace($StringToHash)) {
+        throw "Пустая строка для хэша!"
     }
     
     if (-not (Test-Blake3)) {
@@ -98,11 +98,11 @@ function Get-Blake3Hash {
     
     try {
         $outputFile = [System.IO.Path]::GetTempFileName()
-        $process = Start-Process -FilePath "b3sum" -ArgumentList @("`"$FilePath`"") -Wait -PassThru -NoNewWindow -RedirectStandardOutput $outputFile
+        $process = Start-Process -FilePath "b3sum" -ArgumentList @("`"$StringToHash`"") -Wait -PassThru -NoNewWindow -RedirectStandardOutput $outputFile
         
         if ($process.ExitCode -ne 0) {
             Remove-Item $outputFile -ErrorAction SilentlyContinue
-            throw "Ошибка при вычислении Blake3 хеша для файла: $FilePath"
+            throw "Ошибка при вычислении Blake3 хеша для файла: $StringToHash"
         }
         
         $output = Get-Content $outputFile -Raw
@@ -135,4 +135,19 @@ function Ensure-Blake3Available {
     return $true
 }
 
-Export-ModuleMember -Function Test-Blake3, Install-Blake3, Get-Blake3Hash, Ensure-Blake3Available
+
+function Convert-StringToMD5 {
+    param (
+        [Parameter(Mandatory=$true)]
+        [string]$StringToHash
+    )
+
+    $stingAsStream = [System.IO.MemoryStream]::new()
+    $writer = [System.IO.StreamWriter]::new($stingAsStream)
+    $writer.Write($StringToHash)
+    $writer.Flush()
+    $stingAsStream.Position = 0
+    return (Get-FileHash -Algorithm MD5 -InputStream $stingAsStream).Hash
+}
+
+Export-ModuleMember -Function Test-Blake3, Install-Blake3, Get-Blake3Hash, Ensure-Blake3Available, Convert-StringToMD5 

@@ -89,7 +89,7 @@ foreach ($SourceDir in $SourceDirectories) {
         
         try {
             # 1.3. Get Blake3 hash of original file
-            $OriginalFileHash = Get-Blake3Hash "Directory:$($SourceDir.Name),File:$($SourceFile.Name)"
+            $OriginalFileHash = Convert-StringToMD5 "Directory:$($SourceDir.Name),File:$($SourceFile.Name)"
             Write-Verbose "    Blake3 hash: $OriginalFileHash"
             
             # 1.4. Check if transliterated files exist in processed directory

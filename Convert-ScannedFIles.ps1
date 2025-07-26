@@ -75,7 +75,7 @@ Get-ChildItem $FullSourcePath -Name  |
                 # Считаем для строки "Имя папки" + "Имя файла"
                 # Испoльзуем ее как ключ в списке файлов (индексе)
                 $hashStartTime = Get-Date
-                $Blake3Hash = Get-Blake3Hash "Directory:$($CurrentDirIndex.OriginalName),File:$($_.FullName)"
+                $Blake3Hash = Convert-StringToMD5 "Directory:$($CurrentDirIndex.OriginalName),File:$($_.FullName)"
                 $hashEndTime = Get-Date
                 $hashDuration = $hashEndTime - $hashStartTime
                 
