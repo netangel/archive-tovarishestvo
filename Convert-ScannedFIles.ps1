@@ -72,9 +72,10 @@ Get-ChildItem $FullSourcePath -Name  |
             Where-Object { $_.Extension -match '\.(tiff?|pdf)$' } |
             ForEach-Object -Process {
                 # Контрольная сумма скана (Blake3)
+                # Считаем для строки "Имя папки" + "Имя файла"
                 # Испoльзуем ее как ключ в списке файлов (индексе)
                 $hashStartTime = Get-Date
-                $Blake3Hash = Get-Blake3Hash $_.FullName
+                $Blake3Hash = Get-Blake3Hash "Directory:$($CurrentDirIndex.OriginalName),File:$($_.FullName)"
                 $hashEndTime = Get-Date
                 $hashDuration = $hashEndTime - $hashStartTime
                 
