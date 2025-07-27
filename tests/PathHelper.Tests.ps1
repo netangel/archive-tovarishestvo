@@ -38,6 +38,38 @@ Describe 'File name => tags' {
     It 'Many digits and words tag' {
         Get-TagsFromName '1000И1Ночь' | Should -Be @('1000 и 1Ночь') 
     }
+    
+    It 'Should handle № as part of document number' {
+        Get-TagsFromName 'Чертеж№123_Деталь' | Should -Be @('Чертеж №123', 'Деталь')
+    }
+    
+    It 'Should handle # as part of document number' {
+        Get-TagsFromName 'Plan#456_Section' | Should -Be @('Plan #456', 'Section')
+    }
+    
+    It 'Should handle № with complex word' {
+        Get-TagsFromName 'ТехническийДокумент№789_Раздел' | Should -Be @('Технический Документ №789', 'Раздел')
+    }
+    
+    It 'Should split on # when not followed by number' {
+        Get-TagsFromName 'Test#Symbol_Another' | Should -Be @('Test', 'Symbol', 'Another')
+    }
+    
+    It 'Should split on № when not followed by number' {
+        Get-TagsFromName 'Test№Symbol_Another' | Should -Be @('Test', 'Symbol', 'Another')
+    }
+    
+    It 'Should handle parentheses as separators' {
+        Get-TagsFromName 'Test(Symbol)_Another' | Should -Be @('Test', 'Symbol', 'Another')
+    }
+    
+    It 'Should handle brackets as separators' {
+        Get-TagsFromName 'Test[Symbol]_Another{Item}' | Should -Be @('Test', 'Symbol', 'Another', 'Item')
+    }
+    
+    It 'Should handle multiple numbered items' {
+        Get-TagsFromName 'Чертеж№123_План#456_Схема' | Should -Be @('Чертеж №123', 'План #456', 'Схема')
+    }
 }
 
 

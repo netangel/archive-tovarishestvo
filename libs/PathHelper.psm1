@@ -35,17 +35,104 @@ function Test-IsFullPath([string] $Path) {
 
 function Get-TagsFromName([string] $FileName)
 {
-    $Tags = ( $FileName -split "[_-]" ) -notmatch "^[\d\s.,]+$"
-
-    for ($i = 0; $i -lt $Tags.Count; $i++) {
-        while ($Tags[$i] -cmatch "[^\d\s.,]+?[\p{Lu}\d]+") {   
-            $Tags[$i] = $Tags[$i] -creplace "(?<begin>.*?)(?<first>\w+?)(?<second>\p{Lu}\w*)", '${begin}${first} ${second}'
-            $Tags[$i] = $Tags[$i] -creplace "(?<begin>.*?)(?<first>[^\d]+?)(?<second>[\d.,]+)", '${begin}${first} ${second}'
-        }
-        $Tags[$i] = $Tags[$i] -creplace "^(?<first>[\d.,]+)(?<second>\w+)$", '${first} ${second}'
+    # Fast path for empty/null input
+    if ([string]::IsNullOrWhiteSpace($FileName)) {
+        return @()
     }
+    
+    # Precompiled regex patterns for better performance
+    $numberPatternRegex = [regex]"(?<word>[\p{L}]+)(?<symbol>[№#])(?<number>\d+)"
+    $camelCaseRegex1 = [regex]"(?<begin>.*?)(?<first>\w+?)(?<second>\p{Lu}\w*)"
+    $camelCaseRegex2 = [regex]"(?<begin>.*?)(?<first>[^\d\s№#]+?)(?<second>[\d.,]+)"
+    $leadingNumberRegex = [regex]"^(?<first>[\d.,]+)(?<second>\w+)$"
+    $digitOnlyRegex = [regex]"^[\d\s.,]+$"
+    $camelCaseCheckRegex = [regex]"[\p{L}]+[\p{Lu}\d]+"
+    
+    # Single preprocessing step
+    $preprocessed = $numberPatternRegex.Replace($FileName, '${word}|NUMBERTAG|${symbol}${number}')
+    
+    # Split on delimiters but NOT on our special marker
+    $splitResult = $preprocessed -split "[_\-()[\]{}]"
+    
+    # Use ArrayList for better performance than array concatenation
+    $Tags = [System.Collections.ArrayList]::new()
+    
+    foreach ($tag in $splitResult) {
+        $trimmed = $tag.Trim()
+        
+        # Skip empty or digit-only strings
+        if ($trimmed -eq "" -or $digitOnlyRegex.IsMatch($trimmed)) {
+            continue
+        }
+        
+        # Handle special number patterns first
+        if ($trimmed -match "^(.+)\|NUMBERTAG\|(.+)$") {
+            # Handle numbered tags
+            $word = $Matches[1]
+            $numberPart = $Matches[2]
+            $processedWord = ProcessWordSeparation -Word $word -CamelCaseRegex1 $camelCaseRegex1 -CamelCaseRegex2 $camelCaseRegex2 -CamelCaseCheckRegex $camelCaseCheckRegex
+            $processed = "$processedWord $numberPart"
+            
+            # Apply final transformations
+            $processed = $leadingNumberRegex.Replace($processed, '${first} ${second}')
+            $processed = $processed -replace "\s+", " "
+            $processed = $processed.Trim()
+            
+            if ($processed -ne "") {
+                $Tags.Add($processed) | Out-Null
+            }
+        } else {
+            # Handle regular tags - need to split on remaining # and № symbols
+            $subTags = $trimmed -split "[#№]"
+            
+            foreach ($subTag in $subTags) {
+                $subTrimmed = $subTag.Trim()
+                if ($subTrimmed -ne "" -and !$digitOnlyRegex.IsMatch($subTrimmed)) {
+                    $processed = ProcessWordSeparation -Word $subTrimmed -CamelCaseRegex1 $camelCaseRegex1 -CamelCaseRegex2 $camelCaseRegex2 -CamelCaseCheckRegex $camelCaseCheckRegex
+                    
+                    # Apply final transformations
+                    $processed = $leadingNumberRegex.Replace($processed, '${first} ${second}')
+                    $processed = $processed -replace "\s+", " "
+                    $processed = $processed.Trim()
+                    
+                    if ($processed -ne "") {
+                        $Tags.Add($processed) | Out-Null
+                    }
+                }
+            }
+        }
+    }
+    
+    return $Tags.ToArray()
+}
 
-    $Tags
+# Helper function to avoid code duplication
+function ProcessWordSeparation {
+    param(
+        [string]$Word,
+        [regex]$CamelCaseRegex1,
+        [regex]$CamelCaseRegex2,
+        [regex]$CamelCaseCheckRegex
+    )
+    
+    $processed = $Word
+    $previousValue = ""
+    $iterationCount = 0
+    $maxIterations = 10
+    
+    # Optimized loop with precompiled regex
+    while ($CamelCaseCheckRegex.IsMatch($processed) -and $processed -ne $previousValue -and $iterationCount -lt $maxIterations) {
+        $previousValue = $processed
+        $processed = $CamelCaseRegex1.Replace($processed, '${begin}${first} ${second}')
+        $processed = $CamelCaseRegex2.Replace($processed, '${begin}${first} ${second}')
+        $iterationCount++
+    }
+    
+    if ($iterationCount -eq $maxIterations) {
+        Write-Warning "Get-TagsFromName: Maximum iterations reached for tag '$processed'. Processing may be incomplete."
+    }
+    
+    return $processed
 }
 
 function Get-YearFromFilename([string] $FileName)
