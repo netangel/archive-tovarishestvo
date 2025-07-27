@@ -97,14 +97,19 @@ thumbnail = "$thumbnail"
 "@
     }
 
-    if ($tags -and $tags.Count -gt 0) {
-        $tagsJson = $tags | ConvertTo-Json -Compress
-        $frontMatter += @"
+    if ($tags) {
+        # Ensure $tags is always treated as an array for consistent JSON output
+        $tagsArray = @($tags)
+        if ($tagsArray.Count -gt 0) {
+            # Force array output even for single elements by using -AsArray parameter
+            $tagsJson = $tagsArray | ConvertTo-Json -Compress -AsArray
+            $frontMatter += @"
 
 [taxonomies]
 tags = $tagsJson
 
 "@
+        }
     }
 
     $frontMatter += @"
