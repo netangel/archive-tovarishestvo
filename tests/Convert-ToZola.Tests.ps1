@@ -138,5 +138,116 @@ Describe "Convert-ToZola Tests" {
             $content = Get-Content (Join-Path $testOutputPath "no-thumb/no-123.md") -Raw
             $content | Should -Not -Match 'thumbnail ='
         }
+        
+        It "Handles single tag as JSON array" {
+            # Arrange
+            $directory = "single-tag"
+            $fileId = "single-123"
+            $fileData = [PSCustomObject]@{
+                OriginalName = "single-tag-document.tif"
+                Tags = "SingleTag"  # Single string, not array
+                Year = "2023"
+                ResultFileName = "single-tag-document.tif"
+                PngFile = "single-tag-document.png"
+                Thumbnails = @{}
+            }
+
+            # Act
+            New-ContentPage -Directory $directory `
+                           -FileId $fileId `
+                           -FileData $fileData `
+                           -OutputPath $testOutputPath
+
+            # Assert
+            $contentPath = Join-Path $testOutputPath $directory "$fileId.md"
+            $content = Get-Content $contentPath -Raw
+            
+            # Should output as JSON array even for single tag
+            $content | Should -Match 'tags = \["SingleTag"\]'
+            $content | Should -Not -Match 'tags = "SingleTag"'
+        }
+        
+        It "Handles multiple tags as JSON array" {
+            # Arrange
+            $directory = "multi-tag"
+            $fileId = "multi-123"
+            $fileData = [PSCustomObject]@{
+                OriginalName = "multi-tag-document.tif"
+                Tags = @("Tag1", "Tag2", "Tag3")  # Multiple tags array
+                Year = "2023"
+                ResultFileName = "multi-tag-document.tif"
+                PngFile = "multi-tag-document.png"
+                Thumbnails = @{}
+            }
+
+            # Act
+            New-ContentPage -Directory $directory `
+                           -FileId $fileId `
+                           -FileData $fileData `
+                           -OutputPath $testOutputPath
+
+            # Assert
+            $contentPath = Join-Path $testOutputPath $directory "$fileId.md"
+            $content = Get-Content $contentPath -Raw
+            
+            # Should output as JSON array for multiple tags
+            $content | Should -Match 'tags = \["Tag1","Tag2","Tag3"\]'
+        }
+        
+        It "Handles empty tags gracefully" {
+            # Arrange
+            $directory = "empty-tags"
+            $fileId = "empty-123"
+            $fileData = [PSCustomObject]@{
+                OriginalName = "no-tags-document.tif"
+                Tags = @()  # Empty array
+                Year = "2023"
+                ResultFileName = "no-tags-document.tif"
+                PngFile = "no-tags-document.png"
+                Thumbnails = @{}
+            }
+
+            # Act
+            New-ContentPage -Directory $directory `
+                           -FileId $fileId `
+                           -FileData $fileData `
+                           -OutputPath $testOutputPath
+
+            # Assert
+            $contentPath = Join-Path $testOutputPath $directory "$fileId.md"
+            $content = Get-Content $contentPath -Raw
+            
+            # Should not include tags section when empty
+            $content | Should -Not -Match '\[taxonomies\]'
+            $content | Should -Not -Match 'tags ='
+        }
+        
+        It "Handles null tags gracefully" {
+            # Arrange
+            $directory = "null-tags"
+            $fileId = "null-123"
+            $fileData = [PSCustomObject]@{
+                OriginalName = "null-tags-document.tif"
+                Tags = $null  # Null tags
+                Year = "2023"
+                ResultFileName = "null-tags-document.tif"
+                PngFile = "null-tags-document.png"
+                Thumbnails = @{}
+            }
+
+            # Act
+            New-ContentPage -Directory $directory `
+                           -FileId $fileId `
+                           -FileData $fileData `
+                           -OutputPath $testOutputPath
+
+            # Assert
+            $contentPath = Join-Path $testOutputPath $directory "$fileId.md"
+            $content = Get-Content $contentPath -Raw
+            
+            # Should not include tags section when null
+            $content | Should -Not -Match '\[taxonomies\]'
+            $content | Should -Not -Match 'tags ='
+        }
     }
 }
