@@ -13,7 +13,6 @@ $config = Get-Content "config.json" | ConvertFrom-Json -AsHashtable
 $requiredPaths = [ordered]@{
     SourcePath = "Корневая директория с отсканированными чертежами"
     ResultPath = "Директория с чертежами для публикации"
-    ZolaContentPath = "Директория для шаблонов генерации сайта"
 }
 
 Import-Module (Join-Path $PSScriptRoot "libs/ToolsHelper.psm1")  -Force

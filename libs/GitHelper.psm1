@@ -152,11 +152,13 @@ function Add-AllNewFiles {
 }
 
 function Push-GitCommit {
+	param([string]$BranchName)
+	
     Invoke-GitOperation -Arguments @("commit", "-am", "`"Обновление метаданных при автоматической обработке`"") -OperationName "commit -am" `
         -PreOperation { Write-Host "Создадим git commit..." } `
         -PostOperation { Write-Host "Git commit готов..." } | Out-Null 
 
-    Invoke-GitOperation -Arguments @("push", "origin") -OperationName "push origin" `
+    Invoke-GitOperation -Arguments @("push", "--set-upstream", "origin", $BranchName) -OperationName "push --set-upstream origin $BranchName" `
         -PostOperation { Write-Host "Отправили данные на сервер..." } | Out-Null 
 }
 

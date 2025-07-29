@@ -72,7 +72,9 @@ Get-ChildItem $FullSourcePath -Name  |
                 # Контрольная сумма скана (MD5)
                 # Считаем для строки "Имя папки" + "Имя файла"
                 # Испoльзуем ее как ключ в списке файлов (индексе)
-                $MD5Hash = Get-DirectoryFileHash -DirectoryName $CurrentDirIndex.OriginalName -FileName $_.FullName
+                $MD5Hash = Get-DirectoryFileHash -DirectoryName $CurrentDirIndex.OriginalName -FileName $_.Name
+				
+				Write-Verbose "Хэш-код для файла: $MD5Hash"
                
                 # Попробуем найти данные для файла в метаданных
                 $MaybeFileData = $CurrentDirIndex.Files.$MD5Hash
@@ -81,6 +83,12 @@ Get-ChildItem $FullSourcePath -Name  |
                 
                 # Обработаем файл и вернем метаданные
                 $FileData = Convert-FileAndCreateData $_ $MaybeFileData $FullCurrentDirPath
+				
+				if (($MaybeFileData | ConvertTo-Json -Compress) -eq ($FileData | ConvertTo-Json -Compress))
+				{
+					Write-Verbose "Обработанный чертеж с таким именем уже есть в метаданных, пропускаем"
+					return
+				}
 
                 # Проверим, если скан был много-страничный, обновим метаданные соответственно
                 $UpdatedFiledData = Repair-MultiPngReference -FileData $FileData -FullCurrentDirPath $FullCurrentDirPath

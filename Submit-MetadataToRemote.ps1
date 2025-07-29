@@ -26,7 +26,7 @@ try {
 
     Add-AllNewFiles
 
-    Push-GitCommit
+    Push-GitCommit $GitBranch
 
 }
 catch {

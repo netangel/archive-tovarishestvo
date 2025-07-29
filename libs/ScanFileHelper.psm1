@@ -11,7 +11,6 @@ function Convert-FileAndCreateData {
     # и оригинальное имя файла совпадает с текущим именем файла, 
     # то файл уже обработан
     if ($null -ne $MaybeFileData -and $MaybeFileData.OriginalName -ceq $SourceFile.Name) {
-        Write-Verbose "Обработанный чертеж с таким именем уже есть в метаданных, пропускаем"
         return $MaybeFileData
     }
 

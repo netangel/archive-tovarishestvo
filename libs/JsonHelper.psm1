@@ -17,6 +17,8 @@ function Read-ResultDirectoryMetadata {
     
     process {
         $JsonIndexFile = Join-Path (Join-Path $ResultPath $MetadataDir) ($DirName + ".json")
+		
+		Write-Verbose "Имя файла с метаданными для папки: $JsonIndexFile"
         
         if ((Test-Path $JsonIndexFile) -and (Test-Json -Path $JsonIndexFile)) {
             return Get-Content -Path $JsonIndexFile | ConvertFrom-Json
