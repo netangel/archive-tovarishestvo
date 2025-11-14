@@ -190,26 +190,72 @@ function New-GitLabMergeRequest {
     Submit-MergeRequest @params | Out-Null
 }
 
+function Test-OpenMergeRequests {
+    param(
+        [string]$GitLabUrl = "https://gitlab.com",
+        [string]$ProjectId,
+        [string]$AccessToken
+    )
+
+    # Construct the API URL for listing open merge requests
+    $apiUrl = "$GitLabUrl/api/v4/projects/$ProjectId/merge_requests?state=opened"
+
+    # Prepare headers
+    $headers = @{
+        "PRIVATE-TOKEN" = $AccessToken
+        "Content-Type"  = "application/json"
+    }
+
+    try {
+        Write-Host "Проверяем наличие открытых merge запросов..." -ForegroundColor Yellow
+
+        # Make the API call
+        $response = Invoke-RestMethod -Uri $apiUrl -Method Get -Headers $headers
+
+        if ($response.Count -gt 0) {
+            Write-Host "⚠️  Обнаружено открытых merge запросов: $($response.Count)" -ForegroundColor Red
+            Write-Host ""
+            foreach ($mr in $response) {
+                Write-Host "  MR !$($mr.iid): $($mr.title)" -ForegroundColor Yellow
+                Write-Host "    Ветка: $($mr.source_branch) -> $($mr.target_branch)" -ForegroundColor Gray
+                Write-Host "    URL: $($mr.web_url)" -ForegroundColor Blue
+                Write-Host ""
+            }
+            return $true
+        }
+        else {
+            Write-Host "✅ Открытых merge запросов не найдено" -ForegroundColor Green
+            return $false
+        }
+    }
+    catch {
+        Write-Host "⚠️  Не удалось проверить открытые merge запросы:" -ForegroundColor Yellow
+        Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
+        # Don't block processing if we can't check - just warn
+        return $false
+    }
+}
+
 function Submit-MergeRequest {
     param(
         [Parameter(Mandatory = $true)]
-        [string]$GitLabUrl, 
-    
+        [string]$GitLabUrl,
+
         [Parameter(Mandatory = $true)]
         [string]$ProjectId,
-    
+
         [Parameter(Mandatory = $true)]
         [string]$AccessToken,
-    
+
         [Parameter(Mandatory = $true)]
         [string]$SourceBranch,
-    
+
         [Parameter(Mandatory = $true)]
         [string]$TargetBranch,
-    
+
         [Parameter(Mandatory = $true)]
         [string]$Title,
-    
+
         [string]$Description = "",
         [string]$AssigneeId = "",
         [string]$ReviewerId = "",
@@ -248,32 +294,32 @@ function Submit-MergeRequest {
     try {
         Write-Host "Создаем merge запрос..." -ForegroundColor Yellow
         Write-Host "Исходная ветка: $SourceBranch -> Целевая ветка: $TargetBranch" -ForegroundColor Cyan
-    
+
         # Make the API call
         $response = Invoke-RestMethod -Uri $apiUrl -Method Post -Headers $headers -Body $jsonBody
-    
+
         Write-Host "✅ Merge запрос создан успешно!" -ForegroundColor Green
         Write-Host "MR ID: $($response.iid)" -ForegroundColor White
         Write-Host "URL: $($response.web_url)" -ForegroundColor Blue
-    
+
         return $response
     }
     catch {
         $errorDetails = $_.Exception.Response | ConvertFrom-Json -ErrorAction SilentlyContinue
         Write-Host "❌ Не получилось создать merge запрос:" -ForegroundColor Red
         Write-Host "Status: $($_.Exception.Response.StatusCode)" -ForegroundColor Red
-    
+
         if ($errorDetails.message) {
             Write-Host "Error: $($errorDetails.message)" -ForegroundColor Red
         }
         else {
             Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
         }
-    
+
         throw
     }
 
 }
 
-Export-ModuleMember -Function Test-GitConnection, Switch-ToMainBranch, Update-MainBranch, New-ProcessingBranch,  
-                                Add-AllNewFiles, Push-GitCommit, New-GitLabMergeRequest 
+Export-ModuleMember -Function Test-GitConnection, Switch-ToMainBranch, Update-MainBranch, New-ProcessingBranch,
+                                Add-AllNewFiles, Push-GitCommit, New-GitLabMergeRequest, Test-OpenMergeRequests 
