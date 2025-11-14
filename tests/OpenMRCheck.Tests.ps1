@@ -4,14 +4,14 @@ BeforeAll {
 
 Describe 'Test-OpenMergeRequests Function Tests' {
     BeforeEach {
-        # Mock Write-Host to suppress console output during tests
-        Mock Write-Host {}
+        # Mock Write-Host in the GitHelper module to suppress console output during tests
+        Mock Write-Host -ModuleName GitHelper {}
     }
 
     Context 'When no open merge requests exist' {
         It 'Should return false when API returns empty array' {
             # Arrange
-            Mock Invoke-RestMethod {
+            Mock Invoke-RestMethod -ModuleName GitHelper {
                 return @()
             }
 
@@ -22,7 +22,7 @@ Describe 'Test-OpenMergeRequests Function Tests' {
             $result | Should -Be $false
 
             # Verify the API was called with correct parameters
-            Should -Invoke Invoke-RestMethod -Exactly 1 -ParameterFilter {
+            Should -Invoke Invoke-RestMethod -ModuleName GitHelper -Exactly 1 -ParameterFilter {
                 $Uri -eq "https://gitlab.com/api/v4/projects/12345/merge_requests?state=opened" -and
                 $Method -eq "Get" -and
                 $Headers["PRIVATE-TOKEN"] -eq "test-token"
@@ -33,7 +33,7 @@ Describe 'Test-OpenMergeRequests Function Tests' {
     Context 'When open merge requests exist' {
         It 'Should return true when API returns one open MR' {
             # Arrange
-            Mock Invoke-RestMethod {
+            Mock Invoke-RestMethod -ModuleName GitHelper {
                 return @(
                     @{
                         iid = 42
@@ -54,7 +54,7 @@ Describe 'Test-OpenMergeRequests Function Tests' {
 
         It 'Should return true when API returns multiple open MRs' {
             # Arrange
-            Mock Invoke-RestMethod {
+            Mock Invoke-RestMethod -ModuleName GitHelper {
                 return @(
                     @{
                         iid = 42
@@ -82,7 +82,7 @@ Describe 'Test-OpenMergeRequests Function Tests' {
 
         It 'Should display details of all open MRs' {
             # Arrange
-            Mock Invoke-RestMethod {
+            Mock Invoke-RestMethod -ModuleName GitHelper {
                 return @(
                     @{
                         iid = 42
@@ -98,10 +98,10 @@ Describe 'Test-OpenMergeRequests Function Tests' {
             $result = Test-OpenMergeRequests -ProjectId "12345" -AccessToken "test-token"
 
             # Assert
-            Should -Invoke Write-Host -ParameterFilter {
+            Should -Invoke Write-Host -ModuleName GitHelper -ParameterFilter {
                 $Object -match "MR !42: Test MR"
             }
-            Should -Invoke Write-Host -ParameterFilter {
+            Should -Invoke Write-Host -ModuleName GitHelper -ParameterFilter {
                 $Object -match "feature -> main"
             }
         }
@@ -110,27 +110,27 @@ Describe 'Test-OpenMergeRequests Function Tests' {
     Context 'When using custom GitLab URL' {
         It 'Should use custom GitLab URL when provided' {
             # Arrange
-            Mock Invoke-RestMethod { return @() }
+            Mock Invoke-RestMethod -ModuleName GitHelper { return @() }
             $customUrl = "https://gitlab.example.com"
 
             # Act
             Test-OpenMergeRequests -GitLabUrl $customUrl -ProjectId "12345" -AccessToken "test-token"
 
             # Assert
-            Should -Invoke Invoke-RestMethod -ParameterFilter {
+            Should -Invoke Invoke-RestMethod -ModuleName GitHelper -ParameterFilter {
                 $Uri -eq "$customUrl/api/v4/projects/12345/merge_requests?state=opened"
             }
         }
 
         It 'Should use default GitLab URL when not provided' {
             # Arrange
-            Mock Invoke-RestMethod { return @() }
+            Mock Invoke-RestMethod -ModuleName GitHelper { return @() }
 
             # Act
             Test-OpenMergeRequests -ProjectId "12345" -AccessToken "test-token"
 
             # Assert
-            Should -Invoke Invoke-RestMethod -ParameterFilter {
+            Should -Invoke Invoke-RestMethod -ModuleName GitHelper -ParameterFilter {
                 $Uri -eq "https://gitlab.com/api/v4/projects/12345/merge_requests?state=opened"
             }
         }
@@ -139,7 +139,7 @@ Describe 'Test-OpenMergeRequests Function Tests' {
     Context 'When API call fails' {
         It 'Should return false and not throw when API returns error' {
             # Arrange
-            Mock Invoke-RestMethod {
+            Mock Invoke-RestMethod -ModuleName GitHelper {
                 throw "API Error: Unauthorized"
             }
 
@@ -150,14 +150,14 @@ Describe 'Test-OpenMergeRequests Function Tests' {
             $result | Should -Be $false
 
             # Should display warning message
-            Should -Invoke Write-Host -ParameterFilter {
+            Should -Invoke Write-Host -ModuleName GitHelper -ParameterFilter {
                 $Object -match "Не удалось проверить открытые merge запросы"
             }
         }
 
         It 'Should handle network timeout gracefully' {
             # Arrange
-            Mock Invoke-RestMethod {
+            Mock Invoke-RestMethod -ModuleName GitHelper {
                 throw [System.Net.WebException]::new("The operation has timed out")
             }
 
@@ -167,7 +167,7 @@ Describe 'Test-OpenMergeRequests Function Tests' {
 
         It 'Should handle 404 error gracefully' {
             # Arrange
-            Mock Invoke-RestMethod {
+            Mock Invoke-RestMethod -ModuleName GitHelper {
                 $exception = New-Object System.Exception("404 Not Found")
                 throw $exception
             }
@@ -183,27 +183,27 @@ Describe 'Test-OpenMergeRequests Function Tests' {
     Context 'Request headers and authentication' {
         It 'Should include correct authentication header' {
             # Arrange
-            Mock Invoke-RestMethod { return @() }
+            Mock Invoke-RestMethod -ModuleName GitHelper { return @() }
             $testToken = "secret-token-12345"
 
             # Act
             Test-OpenMergeRequests -ProjectId "12345" -AccessToken $testToken
 
             # Assert
-            Should -Invoke Invoke-RestMethod -ParameterFilter {
+            Should -Invoke Invoke-RestMethod -ModuleName GitHelper -ParameterFilter {
                 $Headers["PRIVATE-TOKEN"] -eq $testToken
             }
         }
 
         It 'Should include Content-Type header' {
             # Arrange
-            Mock Invoke-RestMethod { return @() }
+            Mock Invoke-RestMethod -ModuleName GitHelper { return @() }
 
             # Act
             Test-OpenMergeRequests -ProjectId "12345" -AccessToken "test-token"
 
             # Assert
-            Should -Invoke Invoke-RestMethod -ParameterFilter {
+            Should -Invoke Invoke-RestMethod -ModuleName GitHelper -ParameterFilter {
                 $Headers["Content-Type"] -eq "application/json"
             }
         }
@@ -212,13 +212,13 @@ Describe 'Test-OpenMergeRequests Function Tests' {
     Context 'Query parameter validation' {
         It 'Should query only for opened state merge requests' {
             # Arrange
-            Mock Invoke-RestMethod { return @() }
+            Mock Invoke-RestMethod -ModuleName GitHelper { return @() }
 
             # Act
             Test-OpenMergeRequests -ProjectId "12345" -AccessToken "test-token"
 
             # Assert
-            Should -Invoke Invoke-RestMethod -ParameterFilter {
+            Should -Invoke Invoke-RestMethod -ModuleName GitHelper -ParameterFilter {
                 $Uri -match "state=opened"
             }
         }
