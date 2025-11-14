@@ -106,6 +106,24 @@ if ($gitCheckProcess.ExitCode -ne 0) {
     exit 1
 }
 
+# Проверим наличие открытых merge запросов перед обработкой
+$projectId = $config['GitlabProjectId']
+$gitlabToken = $env:GITLAB_TOKEN
+
+if (-not [string]::IsNullOrWhiteSpace($projectId) -and -not [string]::IsNullOrWhiteSpace($gitlabToken)) {
+    $hasOpenMRs = Test-OpenMergeRequests -ProjectId $projectId -AccessToken $gitlabToken
+
+    if ($hasOpenMRs) {
+        Write-Host ""
+        Write-Host "❌ Обработка прервана: обнаружены открытые merge запросы" -ForegroundColor Red
+        Write-Host "   Пожалуйста, завершите ревью и слияние существующих MR перед началом новой обработки" -ForegroundColor Yellow
+        Write-Host ""
+        exit 1
+    }
+} else {
+    Write-Host "⚠️  Пропускаем проверку открытых MR: отсутствует GitlabProjectId или GITLAB_TOKEN" -ForegroundColor Yellow
+}
+
 $convertScansProcess = Start-Process -FilePath $pwshPath `
         -ArgumentList "-File", "./Convert-ScannedFIles.ps1", "-SourcePath", $config['SourcePath'], "-ResultPath", $config['ResultPath'] `
         -Wait -PassThru -NoNewWindow 
