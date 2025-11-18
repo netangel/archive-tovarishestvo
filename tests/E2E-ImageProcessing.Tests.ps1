@@ -144,6 +144,15 @@ Describe "End-to-End Image Processing Tests" {
     BeforeAll {
         Write-Host "=== E2E Test Setup: Checking Required Tools ===" -ForegroundColor Cyan
 
+        # Debug: Check what functions are available from ToolsHelper module
+        $toolsHelperModule = Get-Module ToolsHelper
+        if ($toolsHelperModule) {
+            Write-Host "ToolsHelper module loaded. Exported functions:" -ForegroundColor Yellow
+            $toolsHelperModule.ExportedFunctions.Keys | ForEach-Object { Write-Host "  - $_" -ForegroundColor Gray }
+        } else {
+            Write-Warning "ToolsHelper module NOT loaded!"
+        }
+
         # Check if required tools are available
         $script:hasImageMagick = Test-ImageMagick
         $script:hasGhostScript = Test-Ghostscript
