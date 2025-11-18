@@ -155,4 +155,5 @@ function Exit-WithError {
 }
 
 
-Export-ModuleMember -Function Test-RequiredTools, Get-ToolCommand, Get-CrossPlatformPwsh, Exit-WithError, Test-CommandExists
+Export-ModuleMember -Function Test-RequiredTools, Get-ToolCommand, Get-CrossPlatformPwsh, Exit-WithError, Test-CommandExists, `
+                              Test-ImageMagick, Test-Ghostscript, Test-Git, Install-RequiredTools
