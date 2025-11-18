@@ -144,29 +144,57 @@ Describe "End-to-End Image Processing Tests" {
         Import-Module $PSScriptRoot/../libs/ToolsHelper.psm1 -Force
         Import-Module $PSScriptRoot/../libs/ConvertImage.psm1 -Force
 
-        # Check if required tools are available for REAL E2E testing
-        $script:hasImageMagick = Test-CommandExists "magick"
-        $script:hasGhostScript = Test-CommandExists "gswin64c" -or Test-CommandExists "gs" -or Test-CommandExists "gsc"
+        Write-Host "=== E2E Test Setup: Checking Required Tools ===" -ForegroundColor Cyan
 
-        # Determine if we can run real E2E tests
-        $script:canRunRealTests = $script:hasImageMagick -and $script:hasGhostScript
+        # Check if required tools are available
+        $script:hasImageMagick = Test-ImageMagick
+        $script:hasGhostScript = Test-Ghostscript
 
-        if ($script:canRunRealTests) {
-            Write-Host "✅ All required tools found - running REAL E2E tests" -ForegroundColor Green
-            Write-Host "   ImageMagick: Available"
-            Write-Host "   GhostScript: Available"
+        if (-not $script:hasImageMagick -or -not $script:hasGhostScript) {
+            Write-Warning "⚠️  Some required tools are missing"
+            Write-Warning "   ImageMagick: $(if ($script:hasImageMagick) { '✅ Installed' } else { '❌ NOT installed' })"
+            Write-Warning "   GhostScript: $(if ($script:hasGhostScript) { '✅ Installed' } else { '❌ NOT installed' })"
+            Write-Warning ""
+
+            # In automated test environment, attempt installation
+            Write-Host "Attempting to install missing tools for E2E testing..." -ForegroundColor Yellow
+
+            try {
+                # Call Install-RequiredTools directly (simulating user choosing 'Y')
+                Install-RequiredTools
+
+                # Recheck after installation
+                $script:hasImageMagick = Test-ImageMagick
+                $script:hasGhostScript = Test-Ghostscript
+
+                if ($script:hasImageMagick -and $script:hasGhostScript) {
+                    Write-Host "✅ Tools installed successfully!" -ForegroundColor Green
+                } else {
+                    Write-Warning "⚠️  Tool installation completed but some tools still not detected"
+                    Write-Warning "   This may be due to PATH not being refreshed"
+                    Write-Warning "   You may need to restart PowerShell session"
+                }
+            }
+            catch {
+                Write-Warning "❌ Failed to install tools: $($_.Exception.Message)"
+                Write-Warning "   E2E tests requiring real image processing will be skipped"
+                Write-Warning ""
+                Write-Warning "To run full E2E tests, manually install:"
+                Write-Warning "  - Windows: choco install imagemagick ghostscript -y"
+                Write-Warning "  - Linux: sudo apt-get install imagemagick ghostscript -y"
+                Write-Warning "  - macOS: brew install imagemagick ghostscript"
+            }
         } else {
-            Write-Warning "⚠️  Some tools missing - some E2E tests will be skipped"
-            Write-Warning "   ImageMagick: $(if ($script:hasImageMagick) { 'Available' } else { 'MISSING' })"
-            Write-Warning "   GhostScript: $(if ($script:hasGhostScript) { 'Available' } else { 'MISSING' })"
-            Write-Warning ""
-            Write-Warning "To run full E2E tests, install:"
-            Write-Warning "  - ImageMagick: https://imagemagick.org/script/download.php"
-            Write-Warning "  - GhostScript: https://ghostscript.com/releases/gsdnld.html"
-            Write-Warning ""
-            Write-Warning "Or on Windows with Chocolatey: choco install imagemagick ghostscript -y"
-            Write-Warning "Or on Linux: sudo apt-get install imagemagick ghostscript -y"
+            Write-Host "✅ All required tools found - running REAL E2E tests" -ForegroundColor Green
+            Write-Host "   ImageMagick: ✅ Installed"
+            Write-Host "   GhostScript: ✅ Installed"
         }
+
+        # Final check to determine if we can run real tests
+        $script:canRunRealTests = Test-ImageMagick -and Test-Ghostscript
+
+        Write-Host "=== E2E Test Mode: $(if ($script:canRunRealTests) { 'FULL (with real tools)' } else { 'LIMITED (some tests will be skipped)' }) ===" -ForegroundColor Cyan
+        Write-Host ""
     }
 
     Context "Environment Setup and Validation" {
