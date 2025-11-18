@@ -17,7 +17,16 @@ jobs:
         run: |
           Set-PSRepository PSGallery -InstallationPolicy Trusted
           Install-Module -Name Pester -Force -RequiredVersion 5.6.1 -SkipPublisherCheck
-      
+
+      - name: Install ImageMagick and Ghostscript for E2E tests
+        shell: pwsh
+        run: |
+          Write-Host "Installing ImageMagick and Ghostscript for E2E testing..."
+          choco install imagemagick ghostscript -y --no-progress
+          Write-Host "Tools installed. Verifying..."
+          magick --version
+          gswin64c --version
+
       - name: Run Pester Tests
         shell: pwsh
         run: |

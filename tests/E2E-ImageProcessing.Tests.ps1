@@ -167,48 +167,12 @@ Describe "End-to-End Image Processing Tests" {
             Write-Warning "   ImageMagick: $(if ($script:hasImageMagick) { '✅ Installed' } else { '❌ NOT installed' })"
             Write-Warning "   GhostScript: $(if ($script:hasGhostScript) { '✅ Installed' } else { '❌ NOT installed' })"
             Write-Warning ""
-
-            # Check if we're in a CI environment (GitHub Actions, GitLab CI, etc.)
-            $isCI = $env:CI -eq 'true' -or $env:GITHUB_ACTIONS -eq 'true' -or $env:GITLAB_CI -eq 'true'
-
-            if ($isCI) {
-                Write-Warning "Running in CI environment - skipping tool installation"
-                Write-Warning "E2E tests requiring image processing will be skipped"
-                Write-Warning ""
-                Write-Warning "To run full E2E tests in CI, pre-install tools in the workflow:"
-                Write-Warning "  - uses: crazy-max/ghaction-chocolatey@v3"
-                Write-Warning "    with:"
-                Write-Warning "      args: install imagemagick ghostscript -y"
-            } else {
-                # Only attempt installation in local development environment
-                Write-Host "Attempting to install missing tools for E2E testing..." -ForegroundColor Yellow
-
-                try {
-                    # Call Install-RequiredTools directly (simulating user choosing 'Y')
-                    Install-RequiredTools
-
-                    # Recheck after installation
-                    $script:hasImageMagick = Test-ImageMagick
-                    $script:hasGhostScript = Test-Ghostscript
-
-                    if ($script:hasImageMagick -and $script:hasGhostScript) {
-                        Write-Host "✅ Tools installed successfully!" -ForegroundColor Green
-                    } else {
-                        Write-Warning "⚠️  Tool installation completed but some tools still not detected"
-                        Write-Warning "   This may be due to PATH not being refreshed"
-                        Write-Warning "   You may need to restart PowerShell session"
-                    }
-                }
-                catch {
-                    Write-Warning "❌ Failed to install tools: $($_.Exception.Message)"
-                    Write-Warning "   E2E tests requiring real image processing will be skipped"
-                    Write-Warning ""
-                    Write-Warning "To run full E2E tests, manually install:"
-                    Write-Warning "  - Windows: choco install imagemagick ghostscript -y"
-                    Write-Warning "  - Linux: sudo apt-get install imagemagick ghostscript -y"
-                    Write-Warning "  - macOS: brew install imagemagick ghostscript"
-                }
-            }
+            Write-Warning "E2E tests requiring real image processing will be skipped"
+            Write-Warning ""
+            Write-Warning "To run full E2E tests, install the missing tools:"
+            Write-Warning "  - Windows: choco install imagemagick ghostscript -y"
+            Write-Warning "  - Linux: sudo apt-get install imagemagick ghostscript -y"
+            Write-Warning "  - macOS: brew install imagemagick ghostscript"
         } else {
             Write-Host "✅ All required tools found - running REAL E2E tests" -ForegroundColor Green
             Write-Host "   ImageMagick: ✅ Installed"
