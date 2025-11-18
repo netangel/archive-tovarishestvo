@@ -647,7 +647,7 @@ Describe "End-to-End Image Processing Tests" {
                 Test-Path (Join-Path $script:zolaPath $dir "_index.md") | Should -BeTrue
 
                 # Check content pages exist
-                $contentPages = @(Get-ChildItem -Path (Join-Path $script:zolaPath $dir) -Filter "*.md" -Exclude "_index.md")
+                $contentPages = @(Get-ChildItem -Path (Join-Path $script:zolaPath $dir) -File -Filter "*.md" | Where-Object { $_.Name -ne "_index.md" })
                 $contentPages.Count | Should -BeGreaterThan 0
             }
         }
