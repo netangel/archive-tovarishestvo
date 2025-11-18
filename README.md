@@ -49,11 +49,6 @@ cd generationscript
 }
 ```
 
-3. **Запуск обработки**:
-```powershell
-./Complete-ArchiveProcess.ps1 -Verbose
-```
-
 ## Использование
 
 ### Основной скрипт обработки
@@ -115,7 +110,7 @@ Invoke-Pester ./tests/HashHelper.Tests.ps1
 
 1. Создать аккаунт на gitlab.com
 2. Создать ssh ключ для пользователя
-```ssh-keygen -f ~/.ssh/solombala-gitlab -t ed25519 -C "Key for akrivopolenov@gmail.com for solombala archive"```
+```ssh-keygen -f ~/.ssh/solombala-gitlab -t ed25519 -C "Key for solombala archive"```
 
     2.1 добавить ключ и имя пользователя в `.ssh/config` файл
     ```
@@ -148,28 +143,6 @@ git switch main
 git branch --set-upstream-to=origin/main main
 ```
 
-## Структура файлов
-
-```
-generationscript/
-├── Complete-ArchiveProcess.ps1       # Главный скрипт обработки
-├── Convert-ScannedFIles.ps1          # Конвертация файлов
-├── ConvertTo-ZolaContent.ps1         # Генерация контента
-├── config.json                       # Конфигурация системы
-├── libs/                            # Библиотеки модулей
-│   ├── HashHelper.psm1              # MD5 хеширование
-│   ├── PathHelper.psm1              # Работа с путями
-│   ├── ConvertImage.psm1            # Обработка изображений
-│   ├── GitHelper.psm1               # Git операции
-│   └── ...
-├── tests/                           # Тесты
-│   ├── HashHelper.Tests.ps1
-│   ├── PathHelper.Tests.ps1
-│   └── ...
-└── .github/workflows/               # CI/CD
-    └── pester-tests.yml
-```
-
 ## Особенности реализации
 
 ### MD5 хеширование
@@ -190,9 +163,6 @@ generationscript/
 - MD5 хеширование через Get-FileHash
 - Определение доступных пакетных менеджеров для других инструментов
 - Graceful fallback при ошибках установки
-
-## Мониторинг производительности
-
 
 ## Разработка и тестирование
 
