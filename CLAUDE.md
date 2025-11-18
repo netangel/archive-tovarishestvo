@@ -17,9 +17,19 @@ Invoke-Pester ./tests/ScanFileHelper.Tests.ps1
 Invoke-Pester ./tests/RequiredPathsAndReturn.Tests.ps1
 Invoke-Pester ./tests/Convert-ToZola.Tests.ps1
 
+# Run end-to-end tests (requires ImageMagick and Ghostscript)
+Invoke-Pester ./tests/E2E-ImageProcessing.Tests.ps1
+
 # Run all tests
 Invoke-Pester ./tests/
 ```
+
+**E2E Tests**: `E2E-ImageProcessing.Tests.ps1` provides comprehensive end-to-end testing of the complete workflow from scanned documents to Zola site generation. These tests:
+- Use **real ImageMagick and Ghostscript** (no mocking)
+- Test the full pipeline: PDF/TIFF → image processing → metadata → Zola content
+- Validate Russian filename handling and transliteration
+- Create test files dynamically using Pester's TestDrive
+- Require ImageMagick and Ghostscript to be installed
 
 ### Main Processing Pipeline
 ```powershell
