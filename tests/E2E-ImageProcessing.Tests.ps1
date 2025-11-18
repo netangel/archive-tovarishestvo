@@ -206,10 +206,10 @@ Describe "End-to-End Image Processing Tests" {
 
         It "Extracts tags from filename pattern" {
             # Arrange
-            $filename = "01-ЧертежПростой_Категория1_Деталь1_1999.pdf"
+            $filename = "01-ЧертежПростой_Категория1_Деталь1_1999"
 
             # Act
-            $tags = Get-TagsFromFileName -FileName $filename
+            $tags = Get-TagsFromName -FileName $filename
 
             # Assert
             $tags | Should -Contain "Категория1"
@@ -218,10 +218,10 @@ Describe "End-to-End Image Processing Tests" {
 
         It "Extracts year from filename pattern" {
             # Arrange
-            $filename = "01-ЧертежПростой_Категория1_Деталь1_1999.pdf"
+            $filename = "01-ЧертежПростой_Категория1_Деталь1_1999"
 
             # Act
-            $year = Get-YearFromFileName -FileName $filename
+            $year = Get-YearFromFilename -FileName $filename
 
             # Assert
             $year | Should -Be "1999"
