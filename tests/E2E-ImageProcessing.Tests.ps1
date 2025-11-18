@@ -221,7 +221,8 @@ Describe "End-to-End Image Processing Tests" {
             (Get-Item $testFile).Length | Should -BeGreaterThan 0
 
             # Verify TIFF signature (little-endian: II or big-endian: MM)
-            $bytes = [System.IO.File]::ReadAllBytes($testFile)
+            $resolvedTestFile = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($testFile)
+            $bytes = [System.IO.File]::ReadAllBytes($resolvedTestFile)
             ($bytes[0] -eq 0x49 -and $bytes[1] -eq 0x49) -or
             ($bytes[0] -eq 0x4D -and $bytes[1] -eq 0x4D) | Should -BeTrue
         }
