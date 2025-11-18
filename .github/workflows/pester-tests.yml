@@ -23,9 +23,28 @@ jobs:
         run: |
           Write-Host "Installing ImageMagick and Ghostscript for E2E testing..."
           choco install imagemagick ghostscript -y --no-progress
+
+          Write-Host "Refreshing environment variables..."
+          $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+
           Write-Host "Tools installed. Verifying..."
           magick --version
-          gswin64c --version
+
+          # Ghostscript might be gs, gsc, or gswin64c depending on installation
+          $gsCommands = @('gswin64c', 'gs', 'gsc')
+          $gsFound = $false
+          foreach ($cmd in $gsCommands) {
+            if (Get-Command $cmd -ErrorAction SilentlyContinue) {
+              Write-Host "Found Ghostscript: $cmd"
+              & $cmd --version
+              $gsFound = $true
+              break
+            }
+          }
+
+          if (-not $gsFound) {
+            Write-Warning "Ghostscript installed but executable not found in PATH. It may still work in tests."
+          }
 
       - name: Run Pester Tests
         shell: pwsh
