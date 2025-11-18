@@ -140,6 +140,13 @@ startxref
 
         return $inputPath
     }
+
+    # Detect tools early so -Skip conditions can evaluate correctly
+    # This MUST be in top-level BeforeAll, not in Describe BeforeAll
+    # because Pester evaluates -Skip parameters before running Describe BeforeAll
+    $script:hasImageMagick = Test-ImageMagick
+    $script:hasGhostScript = Test-Ghostscript
+    $script:canRunRealTests = $script:hasImageMagick -and $script:hasGhostScript
 }
 
 Describe "End-to-End Image Processing Tests" {
