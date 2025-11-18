@@ -145,6 +145,11 @@ startxref
 Describe "End-to-End Image Processing Tests" {
 
     BeforeAll {
+        # Ensure ToolsHelper module is loaded (fallback if not available in scope)
+        if (-not (Get-Command Test-ImageMagick -ErrorAction SilentlyContinue)) {
+            Import-Module (Join-Path $PSScriptRoot "../libs/ToolsHelper.psm1") -Force -Global
+        }
+
         # Check if required tools are available
         $script:hasImageMagick = Test-ImageMagick
         $script:hasGhostScript = Test-Ghostscript
