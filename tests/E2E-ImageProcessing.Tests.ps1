@@ -6,6 +6,8 @@ BeforeAll {
     Import-Module $PSScriptRoot/../libs/JsonHelper.psm1 -Force
     Import-Module $PSScriptRoot/../libs/ZolaContentHelper.psm1 -Force
     Import-Module $PSScriptRoot/../libs/HashHelper.psm1 -Force
+    Import-Module $PSScriptRoot/../libs/ToolsHelper.psm1 -Force
+    Import-Module $PSScriptRoot/../libs/ConvertImage.psm1 -Force
 
     # Helper function to create dummy PDF file
     function New-TestPdfFile {
@@ -140,10 +142,6 @@ startxref
 Describe "End-to-End Image Processing Tests" {
 
     BeforeAll {
-        # Import additional modules for E2E testing
-        Import-Module $PSScriptRoot/../libs/ToolsHelper.psm1 -Force
-        Import-Module $PSScriptRoot/../libs/ConvertImage.psm1 -Force
-
         Write-Host "=== E2E Test Setup: Checking Required Tools ===" -ForegroundColor Cyan
 
         # Check if required tools are available
