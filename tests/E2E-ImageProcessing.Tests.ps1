@@ -647,7 +647,7 @@ Describe "End-to-End Image Processing Tests" {
                 Test-Path (Join-Path $script:zolaPath $dir "_index.md") | Should -BeTrue
 
                 # Check content pages exist
-                $contentPages = Get-ChildItem -Path (Join-Path $script:zolaPath $dir) -Filter "*.md" -Exclude "_index.md"
+                $contentPages = @(Get-ChildItem -Path (Join-Path $script:zolaPath $dir) -Filter "*.md" -Exclude "_index.md")
                 $contentPages.Count | Should -BeGreaterThan 0
             }
         }
@@ -678,7 +678,7 @@ Describe "End-to-End Image Processing Tests" {
             # Validate metadata file structure
             $savedMetadata = Get-Content $metadataFile -Raw | ConvertFrom-Json
             $savedMetadata.DirectoryOriginalName | Should -Be $folder.Name
-            $savedMetadata.ProcessedScans.PSObject.Properties.Count | Should -Be $files.Count
+            @($savedMetadata.ProcessedScans.PSObject.Properties).Count | Should -Be $files.Count
 
             # Generate and validate Zola content
             New-SectionPage -Directory $transliteratedName -OriginalName $folder.Name -OutputPath $script:zolaPath
