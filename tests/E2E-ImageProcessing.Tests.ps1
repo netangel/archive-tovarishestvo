@@ -140,32 +140,33 @@ startxref
 Describe "End-to-End Image Processing Tests" {
 
     BeforeAll {
-        # Mock image conversion functions for all tests
-        Mock -ModuleName ScanFileHelper Convert-PdfToTiff {
-            param($InputPdfFile, $OutputTiffFileName)
-            Set-Content -Path $OutputTiffFileName -Value "mock tiff content"
-        }
+        # Import additional modules for E2E testing
+        Import-Module $PSScriptRoot/../libs/ToolsHelper.psm1 -Force
+        Import-Module $PSScriptRoot/../libs/ConvertImage.psm1 -Force
 
-        Mock -ModuleName ScanFileHelper Convert-WebPngOrRename {
-            param($InputFileName)
-            $pngFile = $InputFileName -replace '\.tif$', '.png'
-            Set-Content -Path $pngFile -Value "mock png content"
-            return (Split-Path $pngFile -Leaf)
-        }
+        # Check if required tools are available for REAL E2E testing
+        $script:hasImageMagick = Test-CommandExists "magick"
+        $script:hasGhostScript = Test-CommandExists "gswin64c" -or Test-CommandExists "gs" -or Test-CommandExists "gsc"
 
-        Mock -ModuleName ScanFileHelper New-Thumbnail {
-            param($InputFileName, $Pixels)
-            $thumbnailPath = Join-Path (Split-Path $InputFileName) "thumbnails"
-            if (-not (Test-Path $thumbnailPath)) {
-                New-Item -Path $thumbnailPath -ItemType Directory -Force | Out-Null
-            }
-            $baseName = [System.IO.Path]::GetFileNameWithoutExtension($InputFileName)
-            $thumbnailFile = Join-Path $thumbnailPath "${baseName}_${Pixels}.png"
-            Set-Content -Path $thumbnailFile -Value "mock thumbnail content"
-            return (Split-Path $thumbnailFile -Leaf)
-        }
+        # Determine if we can run real E2E tests
+        $script:canRunRealTests = $script:hasImageMagick -and $script:hasGhostScript
 
-        Mock -ModuleName ScanFileHelper Optimize-Tiff { }
+        if ($script:canRunRealTests) {
+            Write-Host "✅ All required tools found - running REAL E2E tests" -ForegroundColor Green
+            Write-Host "   ImageMagick: Available"
+            Write-Host "   GhostScript: Available"
+        } else {
+            Write-Warning "⚠️  Some tools missing - some E2E tests will be skipped"
+            Write-Warning "   ImageMagick: $(if ($script:hasImageMagick) { 'Available' } else { 'MISSING' })"
+            Write-Warning "   GhostScript: $(if ($script:hasGhostScript) { 'Available' } else { 'MISSING' })"
+            Write-Warning ""
+            Write-Warning "To run full E2E tests, install:"
+            Write-Warning "  - ImageMagick: https://imagemagick.org/script/download.php"
+            Write-Warning "  - GhostScript: https://ghostscript.com/releases/gsdnld.html"
+            Write-Warning ""
+            Write-Warning "Or on Windows with Chocolatey: choco install imagemagick ghostscript -y"
+            Write-Warning "Or on Linux: sudo apt-get install imagemagick ghostscript -y"
+        }
     }
 
     Context "Environment Setup and Validation" {
@@ -289,7 +290,7 @@ Describe "End-to-End Image Processing Tests" {
         It "Creates transliterated output directories" {
             # Arrange
             $sourceFolder = Get-ChildItem -Path $script:inputPath -Directory | Select-Object -First 1
-            $transliteratedName = ConvertTo-Translit -RusString $sourceFolder.Name
+            $transliteratedName = ConvertTo-Translit -InputString $sourceFolder.Name
 
             # Act
             $outputDir = Join-Path $script:resultPath $transliteratedName
@@ -297,19 +298,18 @@ Describe "End-to-End Image Processing Tests" {
 
             # Assert
             Test-Path $outputDir | Should -BeTrue
-            $outputDir | Should -Match "[a-z0-9\-]+"
         }
 
-        It "Processes PDF files and creates metadata" {
+        It "Processes PDF files and creates metadata with REAL tools" -Skip:(-not $script:canRunRealTests) {
             # Arrange
             $sourceFolder = Join-Path $script:inputPath "тестовая папка 1"
             $pdfFile = Get-ChildItem -Path $sourceFolder -Filter "*.pdf" | Select-Object -First 1
-            $transliteratedDir = ConvertTo-Translit -RusString "тестовая папка 1"
+            $transliteratedDir = ConvertTo-Translit -InputString "тестовая папка 1"
             $resultDir = Join-Path $script:resultPath $transliteratedDir
             New-Item -Path $resultDir -ItemType Directory -Force | Out-Null
             New-Item -Path (Join-Path $resultDir "thumbnails") -ItemType Directory -Force | Out-Null
 
-            # Act
+            # Act - Using REAL image processing functions
             $fileData = Convert-FileAndCreateData -SourceFile $pdfFile -ResultDirFullPath $resultDir
 
             # Assert
@@ -318,9 +318,16 @@ Describe "End-to-End Image Processing Tests" {
             $fileData.ResultFileName | Should -Match "\.tif$"
             $fileData.PngFile | Should -Match "\.png$"
 
-            # Verify mocks were called
-            Should -Invoke -ModuleName ScanFileHelper Convert-PdfToTiff -Times 1 -Exactly
-            Should -Invoke -ModuleName ScanFileHelper Convert-WebPngOrRename -Times 1 -Exactly
+            # Verify REAL files were created (not mocks)
+            $tifPath = Join-Path $resultDir $fileData.ResultFileName
+            $pngPath = Join-Path $resultDir $fileData.PngFile
+
+            Test-Path $tifPath | Should -BeTrue "TIF file should exist: $tifPath"
+            Test-Path $pngPath | Should -BeTrue "PNG file should exist: $pngPath"
+
+            # Verify files are actual images, not mock content
+            (Get-Item $tifPath).Length | Should -BeGreaterThan 100 "TIF should be real image file"
+            (Get-Item $pngPath).Length | Should -BeGreaterThan 100 "PNG should be real image file"
         }
     }
 
@@ -529,13 +536,13 @@ Describe "End-to-End Image Processing Tests" {
             New-Item -Path $script:zolaPath -ItemType Directory -Force | Out-Null
         }
 
-        It "Completes full processing workflow from input to Zola site" {
-            # Step 1: Process all directories
+        It "Completes full processing workflow from input to Zola site with REAL tools" -Skip:(-not $script:canRunRealTests) {
+            # Step 1: Process all directories with REAL image processing
             $inputFolders = Get-ChildItem -Path $script:inputPath -Directory
             $processedDirectories = @()
 
             foreach ($folder in $inputFolders) {
-                $transliteratedName = ConvertTo-Translit -RusString $folder.Name
+                $transliteratedName = ConvertTo-Translit -InputString $folder.Name
                 $outputDir = Join-Path $script:resultPath $transliteratedName
                 New-Item -Path $outputDir -ItemType Directory -Force | Out-Null
                 New-Item -Path (Join-Path $outputDir "thumbnails") -ItemType Directory -Force | Out-Null
@@ -582,6 +589,20 @@ Describe "End-to-End Image Processing Tests" {
                 $outputDir = Join-Path $script:resultPath $dir
                 Test-Path $outputDir | Should -BeTrue
                 Test-Path (Join-Path $outputDir "thumbnails") | Should -BeTrue
+
+                # Verify REAL TIF and PNG files were created
+                $tifFiles = Get-ChildItem -Path $outputDir -Filter "*.tif"
+                $pngFiles = Get-ChildItem -Path $outputDir -Filter "*.png"
+                $tifFiles.Count | Should -BeGreaterThan 0 "Should have real TIF files"
+                $pngFiles.Count | Should -BeGreaterThan 0 "Should have real PNG files"
+
+                # Verify files are actual images, not mock content
+                foreach ($tif in $tifFiles) {
+                    $tif.Length | Should -BeGreaterThan 100 "TIF should be real image: $($tif.Name)"
+                }
+                foreach ($png in $pngFiles) {
+                    $png.Length | Should -BeGreaterThan 100 "PNG should be real image: $($png.Name)"
+                }
             }
 
             # Check metadata files exist
@@ -599,10 +620,10 @@ Describe "End-to-End Image Processing Tests" {
             }
         }
 
-        It "Validates all generated files have correct content and structure" {
-            # Process sample directory
+        It "Validates all generated files have correct content and structure with REAL tools" -Skip:(-not $script:canRunRealTests) {
+            # Process sample directory with REAL image processing
             $folder = Get-ChildItem -Path $script:inputPath -Directory | Select-Object -First 1
-            $transliteratedName = ConvertTo-Translit -RusString $folder.Name
+            $transliteratedName = ConvertTo-Translit -InputString $folder.Name
             $outputDir = Join-Path $script:resultPath $transliteratedName
             New-Item -Path $outputDir -ItemType Directory -Force | Out-Null
             New-Item -Path (Join-Path $outputDir "thumbnails") -ItemType Directory -Force | Out-Null
