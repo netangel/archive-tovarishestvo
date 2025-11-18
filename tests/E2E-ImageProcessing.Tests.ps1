@@ -6,7 +6,7 @@ BeforeAll {
     Import-Module $PSScriptRoot/../libs/JsonHelper.psm1 -Force
     Import-Module $PSScriptRoot/../libs/ZolaContentHelper.psm1 -Force
     Import-Module $PSScriptRoot/../libs/HashHelper.psm1 -Force
-    Import-Module $PSScriptRoot/../libs/ToolsHelper.psm1 -Force
+    Import-Module $PSScriptRoot/../libs/ToolsHelper.psm1 -Force -Global
     Import-Module $PSScriptRoot/../libs/ConvertImage.psm1 -Force
 
     # Helper function to create dummy PDF file
@@ -145,12 +145,17 @@ Describe "End-to-End Image Processing Tests" {
         Write-Host "=== E2E Test Setup: Checking Required Tools ===" -ForegroundColor Cyan
 
         # Debug: Check what functions are available from ToolsHelper module
-        $toolsHelperModule = Get-Module ToolsHelper
+        Write-Host "Checking loaded modules..." -ForegroundColor Yellow
+        Get-Module | ForEach-Object { Write-Host "  Module: $($_.Name)" -ForegroundColor Gray }
+
+        $toolsHelperModule = Get-Module | Where-Object { $_.Name -eq 'ToolsHelper' -or $_.Path -like '*ToolsHelper.psm1' }
         if ($toolsHelperModule) {
             Write-Host "ToolsHelper module loaded. Exported functions:" -ForegroundColor Yellow
             $toolsHelperModule.ExportedFunctions.Keys | ForEach-Object { Write-Host "  - $_" -ForegroundColor Gray }
         } else {
             Write-Warning "ToolsHelper module NOT loaded!"
+            Write-Host "Attempting to import ToolsHelper directly..." -ForegroundColor Yellow
+            Import-Module (Join-Path $PSScriptRoot "../libs/ToolsHelper.psm1") -Force -Global -Verbose
         }
 
         # Check if required tools are available
