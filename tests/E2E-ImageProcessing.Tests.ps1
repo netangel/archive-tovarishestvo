@@ -140,13 +140,6 @@ startxref
 
         return $inputPath
     }
-
-    # Detect tools early so -Skip conditions can evaluate correctly
-    # This MUST be in top-level BeforeAll, not in Describe BeforeAll
-    # because Pester evaluates -Skip parameters before running Describe BeforeAll
-    $script:hasImageMagick = Test-ImageMagick
-    $script:hasGhostScript = Test-Ghostscript
-    $script:canRunRealTests = $script:hasImageMagick -and $script:hasGhostScript
 }
 
 Describe "End-to-End Image Processing Tests" {
@@ -185,31 +178,25 @@ Describe "End-to-End Image Processing Tests" {
         }
         Write-Host ""
 
-        # Check if required tools are available
-        $script:hasImageMagick = Test-ImageMagick
-        $script:hasGhostScript = Test-Ghostscript
+        # Verify required tools are available (tests will fail if missing)
+        $hasImageMagick = Test-ImageMagick
+        $hasGhostScript = Test-Ghostscript
 
-        if (-not $script:hasImageMagick -or -not $script:hasGhostScript) {
-            Write-Warning "⚠️  Some required tools are missing"
-            Write-Warning "   ImageMagick: $(if ($script:hasImageMagick) { '✅ Installed' } else { '❌ NOT installed' })"
-            Write-Warning "   GhostScript: $(if ($script:hasGhostScript) { '✅ Installed' } else { '❌ NOT installed' })"
-            Write-Warning ""
-            Write-Warning "E2E tests requiring real image processing will be skipped"
-            Write-Warning ""
-            Write-Warning "To run full E2E tests, install the missing tools:"
-            Write-Warning "  - Windows: choco install imagemagick ghostscript -y"
-            Write-Warning "  - Linux: sudo apt-get install imagemagick ghostscript -y"
-            Write-Warning "  - macOS: brew install imagemagick ghostscript"
+        if (-not $hasImageMagick -or -not $hasGhostScript) {
+            Write-Host "⚠️  ERROR: Required tools are missing - E2E tests will fail" -ForegroundColor Red
+            Write-Host "   ImageMagick: $(if ($hasImageMagick) { '✅ Installed' } else { '❌ NOT installed' })" -ForegroundColor $(if ($hasImageMagick) { 'Green' } else { 'Red' })
+            Write-Host "   GhostScript: $(if ($hasGhostScript) { '✅ Installed' } else { '❌ NOT installed' })" -ForegroundColor $(if ($hasGhostScript) { 'Green' } else { 'Red' })
+            Write-Host ""
+            Write-Host "Install the missing tools:" -ForegroundColor Yellow
+            Write-Host "  - Windows: choco install imagemagick ghostscript -y"
+            Write-Host "  - Linux: sudo apt-get install imagemagick ghostscript -y"
+            Write-Host "  - macOS: brew install imagemagick ghostscript"
+            Write-Host ""
         } else {
-            Write-Host "✅ All required tools found - running REAL E2E tests" -ForegroundColor Green
-            Write-Host "   ImageMagick: ✅ Installed"
-            Write-Host "   GhostScript: ✅ Installed"
+            Write-Host "✅ All required tools found" -ForegroundColor Green
         }
 
-        # Final check to determine if we can run real tests
-        $script:canRunRealTests = Test-ImageMagick -and Test-Ghostscript
-
-        Write-Host "=== E2E Test Mode: $(if ($script:canRunRealTests) { 'FULL (with real tools)' } else { 'LIMITED (some tests will be skipped)' }) ===" -ForegroundColor Cyan
+        Write-Host "=== E2E Test Mode: Running with REAL image processing tools ===" -ForegroundColor Cyan
         Write-Host ""
     }
 
@@ -345,7 +332,7 @@ Describe "End-to-End Image Processing Tests" {
             Test-Path $outputDir | Should -BeTrue
         }
 
-        It "Processes PDF files and creates metadata with REAL tools" -Skip:(-not $script:canRunRealTests) {
+        It "Processes PDF files and creates metadata with REAL tools" {
             # Arrange
             $sourceFolder = Join-Path $script:inputPath "тестовая папка 1"
             $pdfFile = Get-ChildItem -Path $sourceFolder -Filter "*.pdf" | Select-Object -First 1
@@ -581,7 +568,7 @@ Describe "End-to-End Image Processing Tests" {
             New-Item -Path $script:zolaPath -ItemType Directory -Force | Out-Null
         }
 
-        It "Completes full processing workflow from input to Zola site with REAL tools" -Skip:(-not $script:canRunRealTests) {
+        It "Completes full processing workflow from input to Zola site with REAL tools" {
             # Step 1: Process all directories with REAL image processing
             $inputFolders = Get-ChildItem -Path $script:inputPath -Directory
             $processedDirectories = @()
@@ -665,7 +652,7 @@ Describe "End-to-End Image Processing Tests" {
             }
         }
 
-        It "Validates all generated files have correct content and structure with REAL tools" -Skip:(-not $script:canRunRealTests) {
+        It "Validates all generated files have correct content and structure with REAL tools" {
             # Process sample directory with REAL image processing
             $folder = Get-ChildItem -Path $script:inputPath -Directory | Select-Object -First 1
             $transliteratedName = ConvertTo-Translit -InputString $folder.Name
