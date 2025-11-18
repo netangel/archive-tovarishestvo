@@ -1,0 +1,93 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [ master, main, develop ]
+    paths:
+      - 'libs/**'
+      - 'tests/**'
+      - '*.ps1'
+  pull_request:
+    branches: [ master, main, develop ]
+    paths:
+      - 'libs/**'
+      - 'tests/**'
+      - '*.ps1'
+  workflow_dispatch:
+
+jobs:
+  test-e2e:
+    name: Run E2E Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup PowerShell
+        uses: actions/checkout@v4
+        with:
+          repository: PowerShell/PowerShell
+          path: powershell-temp
+
+      - name: Install PowerShell
+        run: |
+          wget https://github.com/PowerShell/PowerShell/releases/download/v7.4.6/powershell_7.4.6-1.deb_amd64.deb
+          sudo dpkg -i powershell_7.4.6-1.deb_amd64.deb
+          sudo apt-get install -f
+          pwsh --version
+
+      - name: Install Pester
+        shell: pwsh
+        run: |
+          Install-Module -Name Pester -Force -SkipPublisherCheck -Scope CurrentUser
+          Import-Module Pester
+          Get-Module Pester
+
+      - name: Run E2E Tests
+        shell: pwsh
+        run: |
+          $config = New-PesterConfiguration
+          $config.Run.Path = './tests/E2E-ImageProcessing.Tests.ps1'
+          $config.Output.Verbosity = 'Detailed'
+          $config.Run.Exit = $true
+          $config.TestResult.Enabled = $true
+          $config.TestResult.OutputPath = 'test-results.xml'
+
+          Invoke-Pester -Configuration $config
+
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: test-results.xml
+          retention-days: 30
+
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          files: test-results.xml
+          check_name: E2E Test Results
+
+  test-e2e-docker:
+    name: Run E2E Tests (Docker)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          docker build -f tests/Dockerfile.test -t archive-tovarishestvo-tests .
+
+      - name: Run tests in Docker
+        run: |
+          docker run --rm archive-tovarishestvo-tests
+
+      - name: Clean up Docker resources
+        if: always()
+        run: |
+          docker rmi archive-tovarishestvo-tests || true

@@ -1,0 +1,17 @@
+# Dockerfile for running PowerShell E2E tests
+FROM mcr.microsoft.com/powershell:7.4-ubuntu-22.04
+
+# Set working directory
+WORKDIR /app
+
+# Install Pester testing framework
+RUN pwsh -Command "Install-Module -Name Pester -Force -SkipPublisherCheck -Scope AllUsers"
+
+# Copy the entire repository
+COPY . /app/
+
+# Set the working directory to the repository root
+WORKDIR /app
+
+# Default command: run the E2E tests
+CMD ["pwsh", "-Command", "Invoke-Pester ./tests/E2E-ImageProcessing.Tests.ps1 -Output Detailed"]
