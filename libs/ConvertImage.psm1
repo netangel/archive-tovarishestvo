@@ -30,7 +30,7 @@ function Convert-PdfToTiff {
 
         if ($OutputTiffFile.Length -gt ($InputPdfFile.Length / 4)) {
             # original pdf has 300dpi
-            Optimize-Tiff $OutputTiffFile, $OutputTiffFileName
+            Optimize-Tiff -InputTiffFile $OutputTiffFile -OutputTiffFileName $OutputTiffFileName
         }
     }
 }

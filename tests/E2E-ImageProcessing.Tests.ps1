@@ -589,7 +589,7 @@ Describe "End-to-End Image Processing Tests" {
                 $files = Get-ChildItem -Path $folder.FullName -File -Filter "*.pdf"
                 foreach ($file in $files) {
                     $fileData = Convert-FileAndCreateData -SourceFile $file -ResultDirFullPath $outputDir
-                    $fileHash = Convert-StringToMD5 -InputString $file.Name
+                    $fileHash = Convert-StringToMD5 -StringToHash $file.Name
                     $directoryMetadata.ProcessedScans[$fileHash] = $fileData
                 }
 
@@ -668,7 +668,7 @@ Describe "End-to-End Image Processing Tests" {
             $files = Get-ChildItem -Path $folder.FullName -File -Filter "*.pdf"
             foreach ($file in $files) {
                 $fileData = Convert-FileAndCreateData -SourceFile $file -ResultDirFullPath $outputDir
-                $fileHash = Convert-StringToMD5 -InputString $file.Name
+                $fileHash = Convert-StringToMD5 -StringToHash $file.Name
                 $directoryMetadata.ProcessedScans[$fileHash] = $fileData
             }
 
