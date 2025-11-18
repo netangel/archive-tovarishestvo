@@ -3,18 +3,23 @@
 function Convert-PdfToTiff {
     Param(
         # Input file object
-        [Parameter(ValueFromPipelineByPropertyName)] 
+        [Parameter(ValueFromPipelineByPropertyName)]
         [System.Object] $InputPdfFile,
-        
+
         # Output file name
-        [Parameter(ValueFromPipelineByPropertyName)] 
+        [Parameter(ValueFromPipelineByPropertyName)]
         [string] $OutputTiffFileName
     )
 
     process {
         $InputFileName = $InputPdfFile.FullName
+
+        # Resolve PSDrive paths to real filesystem paths for external tools
+        $resolvedInputPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($InputFileName)
+        $resolvedOutputPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputTiffFileName)
+
         $gs = Get-ToolCommand -Tool GhostScript
-        & $gs -dNOPAUSE -sDEVICE=tiffgray ("-sOutputFile=" + $OutputTiffFileName) -q -r300 $InputFileName -c quit
+        & $gs -dNOPAUSE -sDEVICE=tiffgray ("-sOutputFile=" + $resolvedOutputPath) -q -r300 $resolvedInputPath -c quit
 
         $OutputTiffFile = Get-Item $OutputTiffFileName -ErrorAction SilentlyContinue
 
@@ -22,7 +27,7 @@ function Convert-PdfToTiff {
             throw "Не получилось сконвертировать pdf файл: " + $InputFileName
         }
 
-        
+
         if ($OutputTiffFile.Length -gt ($InputPdfFile.Length / 4)) {
             # original pdf has 300dpi
             Optimize-Tiff $OutputTiffFile, $OutputTiffFileName
@@ -32,15 +37,19 @@ function Convert-PdfToTiff {
 
 function Optimize-Tiff {
     Param (
-        [Parameter(ValueFromPipelineByPropertyName)] 
+        [Parameter(ValueFromPipelineByPropertyName)]
         [System.Object] $InputTiffFile,
-        
-        [Parameter(ValueFromPipelineByPropertyName)] 
+
+        [Parameter(ValueFromPipelineByPropertyName)]
         [string] $OutputTiffFileName
     )
 
+    # Resolve PSDrive paths to real filesystem paths for external tools
+    $resolvedInputPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($InputTiffFile.FullName)
+    $resolvedOutputPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputTiffFileName)
+
     $magick = Get-ToolCommand -Tool ImageMagick
-    & $magick $InputTiffFile.FullName -colorspace Gray -quality 100 -resize 50% $OutputTiffFileName
+    & $magick $resolvedInputPath -colorspace Gray -quality 100 -resize 50% $resolvedOutputPath
 }
 
 function New-Thumbnail {
@@ -51,9 +60,13 @@ function New-Thumbnail {
 
     $ThumbnailFile = Get-ThumbnailFileName $InputFileName $Pixels
 
+    # Resolve PSDrive paths to real filesystem paths for external tools
+    $resolvedInputPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($InputFileName)
+    $resolvedThumbnailPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($ThumbnailFile)
+
     $magick = Get-ToolCommand -Tool ImageMagick
-    & $magick $InputFileName -thumbnail "${Pixels}x${Pixels}" -strip -quality 95 $ThumbnailFile
-    
+    & $magick $resolvedInputPath -thumbnail "${Pixels}x${Pixels}" -strip -quality 95 $resolvedThumbnailPath
+
     if ($ThumbnailFile -match "^.*[\/\\](?<filename>.*?)$") {
         return $Matches.filename
     }
@@ -71,10 +84,14 @@ function  Convert-WebPngOrRename {
     }
 
     $WebPngFile = $InputFileName.Replace('.tif', '.png')
-   
-    $magick = Get-ToolCommand -Tool ImageMagick 
-    & $magick $InputFileName -quality 100 $WebPngFile
-    
+
+    # Resolve PSDrive paths to real filesystem paths for external tools
+    $resolvedInputPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($InputFileName)
+    $resolvedWebPngPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($WebPngFile)
+
+    $magick = Get-ToolCommand -Tool ImageMagick
+    & $magick $resolvedInputPath -quality 100 $resolvedWebPngPath
+
     if ($WebPngFile -match "^.*[\/\\](?<filename>.*?)$") {
         return $Matches.filename
     }
