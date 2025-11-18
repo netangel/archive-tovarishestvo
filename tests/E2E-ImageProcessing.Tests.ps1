@@ -150,54 +150,13 @@ Describe "End-to-End Image Processing Tests" {
             Import-Module (Join-Path $PSScriptRoot "../libs/ToolsHelper.psm1") -Force -Global
         }
 
-        # Show detailed command availability
-        Write-Host "=== Checking for required tools ===" -ForegroundColor Cyan
-        Write-Host "PATH: $env:Path" -ForegroundColor DarkGray
-
-        # Check ImageMagick
-        $magickCmd = Get-Command "magick" -ErrorAction SilentlyContinue
-        if ($magickCmd) {
-            Write-Host "  ImageMagick (magick): ✅ Found at $($magickCmd.Source)" -ForegroundColor Green
-        } else {
-            Write-Host "  ImageMagick (magick): ❌ Not found" -ForegroundColor Red
-        }
-
-        # Check all possible Ghostscript names
-        $gsNames = @('gswin64c', 'gswin32c', 'gs', 'gsc')
-        $gsFound = $false
-        foreach ($gsName in $gsNames) {
-            $gsCmd = Get-Command $gsName -ErrorAction SilentlyContinue
-            if ($gsCmd) {
-                Write-Host "  Ghostscript ($gsName): ✅ Found at $($gsCmd.Source)" -ForegroundColor Green
-                $gsFound = $true
-                break
-            }
-        }
-        if (-not $gsFound) {
-            Write-Host "  Ghostscript: ❌ Not found (tried: $($gsNames -join ', '))" -ForegroundColor Red
-        }
-        Write-Host ""
-
         # Verify required tools are available (tests will fail if missing)
         $hasImageMagick = Test-ImageMagick
         $hasGhostScript = Test-Ghostscript
 
         if (-not $hasImageMagick -or -not $hasGhostScript) {
-            Write-Host "⚠️  ERROR: Required tools are missing - E2E tests will fail" -ForegroundColor Red
-            Write-Host "   ImageMagick: $(if ($hasImageMagick) { '✅ Installed' } else { '❌ NOT installed' })" -ForegroundColor $(if ($hasImageMagick) { 'Green' } else { 'Red' })
-            Write-Host "   GhostScript: $(if ($hasGhostScript) { '✅ Installed' } else { '❌ NOT installed' })" -ForegroundColor $(if ($hasGhostScript) { 'Green' } else { 'Red' })
-            Write-Host ""
-            Write-Host "Install the missing tools:" -ForegroundColor Yellow
-            Write-Host "  - Windows: choco install imagemagick ghostscript -y"
-            Write-Host "  - Linux: sudo apt-get install imagemagick ghostscript -y"
-            Write-Host "  - macOS: brew install imagemagick ghostscript"
-            Write-Host ""
-        } else {
-            Write-Host "✅ All required tools found" -ForegroundColor Green
+            throw "E2E tests require ImageMagick and Ghostscript to be installed. Missing: $(if (-not $hasImageMagick) { 'ImageMagick ' })$(if (-not $hasGhostScript) { 'Ghostscript' })"
         }
-
-        Write-Host "=== E2E Test Mode: Running with REAL image processing tools ===" -ForegroundColor Cyan
-        Write-Host ""
     }
 
     Context "Environment Setup and Validation" {
