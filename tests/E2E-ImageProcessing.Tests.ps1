@@ -150,6 +150,34 @@ Describe "End-to-End Image Processing Tests" {
             Import-Module (Join-Path $PSScriptRoot "../libs/ToolsHelper.psm1") -Force -Global
         }
 
+        # Show detailed command availability
+        Write-Host "=== Checking for required tools ===" -ForegroundColor Cyan
+        Write-Host "PATH: $env:Path" -ForegroundColor DarkGray
+
+        # Check ImageMagick
+        $magickCmd = Get-Command "magick" -ErrorAction SilentlyContinue
+        if ($magickCmd) {
+            Write-Host "  ImageMagick (magick): ✅ Found at $($magickCmd.Source)" -ForegroundColor Green
+        } else {
+            Write-Host "  ImageMagick (magick): ❌ Not found" -ForegroundColor Red
+        }
+
+        # Check all possible Ghostscript names
+        $gsNames = @('gswin64c', 'gswin32c', 'gs', 'gsc')
+        $gsFound = $false
+        foreach ($gsName in $gsNames) {
+            $gsCmd = Get-Command $gsName -ErrorAction SilentlyContinue
+            if ($gsCmd) {
+                Write-Host "  Ghostscript ($gsName): ✅ Found at $($gsCmd.Source)" -ForegroundColor Green
+                $gsFound = $true
+                break
+            }
+        }
+        if (-not $gsFound) {
+            Write-Host "  Ghostscript: ❌ Not found (tried: $($gsNames -join ', '))" -ForegroundColor Red
+        }
+        Write-Host ""
+
         # Check if required tools are available
         $script:hasImageMagick = Test-ImageMagick
         $script:hasGhostScript = Test-Ghostscript
