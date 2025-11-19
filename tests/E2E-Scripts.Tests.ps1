@@ -91,8 +91,8 @@ Describe "End-to-End Script Tests" {
 
         # Verify JSON structure
         $metadata1 = Get-Content (Join-Path $script:metadataPath "testovayapapka1.json") -Raw | ConvertFrom-Json
-        $metadata1.DirectoryOriginalName | Should -Be "тестовая папка 1"
-        @($metadata1.ProcessedScans.PSObject.Properties).Count | Should -Be 2
+        $metadata1.OriginalName | Should -Be "тестовая папка 1"
+        @($metadata1.Files.PSObject.Properties).Count | Should -Be 2
 
         # Verify image files were created (real ImageMagick/Ghostscript processing)
         $dir1 = Join-Path $script:resultPath "testovayapapka1"
