@@ -47,10 +47,12 @@ Describe "End-to-End Script Tests" {
         $script:testRoot = "TestDrive:\e2e-scripts"
         $script:sourcePath = Join-Path $script:testRoot "source"
         $script:resultPath = Join-Path $script:testRoot "result"
+        $script:metadataPath = Join-Path $script:resultPath "metadata"
         $script:zolaPath = Join-Path $script:testRoot "zola"
 
         New-Item -Path $script:sourcePath -ItemType Directory -Force | Out-Null
         New-Item -Path $script:resultPath -ItemType Directory -Force | Out-Null
+        New-Item -Path $script:metadataPath -ItemType Directory -Force | Out-Null
 
         # Create test input structure with Russian folder names
         $folder1 = Join-Path $script:sourcePath "тестовая папка 1"
@@ -80,16 +82,15 @@ Describe "End-to-End Script Tests" {
         Test-Path (Join-Path $script:resultPath "testovaya-papka-1") | Should -BeTrue
         Test-Path (Join-Path $script:resultPath "testovaya-papka-2") | Should -BeTrue
 
-        # Check metadata directory was created
-        $metadataPath = Join-Path $script:resultPath "metadata"
-        Test-Path $metadataPath | Should -BeTrue
+        # Check metadata directory exists
+        Test-Path $script:metadataPath | Should -BeTrue
 
         # Check JSON metadata files were created
-        Test-Path (Join-Path $metadataPath "testovaya-papka-1.json") | Should -BeTrue
-        Test-Path (Join-Path $metadataPath "testovaya-papka-2.json") | Should -BeTrue
+        Test-Path (Join-Path $script:metadataPath "testovaya-papka-1.json") | Should -BeTrue
+        Test-Path (Join-Path $script:metadataPath "testovaya-papka-2.json") | Should -BeTrue
 
         # Verify JSON structure
-        $metadata1 = Get-Content (Join-Path $metadataPath "testovaya-papka-1.json") -Raw | ConvertFrom-Json
+        $metadata1 = Get-Content (Join-Path $script:metadataPath "testovaya-papka-1.json") -Raw | ConvertFrom-Json
         $metadata1.DirectoryOriginalName | Should -Be "тестовая папка 1"
         @($metadata1.ProcessedScans.PSObject.Properties).Count | Should -Be 2
 
@@ -101,10 +102,8 @@ Describe "End-to-End Script Tests" {
 
     It "ConvertTo-ZolaContent.ps1 converts JSON metadata to Zola markdown files" {
         # Arrange: Metadata should exist from previous test
-        $metadataPath = Join-Path $script:resultPath "metadata"
-
         # Resolve TestDrive paths to real filesystem paths for the script
-        $resolvedMetadataPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($metadataPath)
+        $resolvedMetadataPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($script:metadataPath)
         $resolvedZolaPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($script:zolaPath)
 
         # Act: Run the actual script
