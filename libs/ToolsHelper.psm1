@@ -20,10 +20,13 @@ function Test-ImageMagick {
 
 # Метод для проверки Ghostscript
 function Test-Ghostscript {
-    $gsCommand = Test-CommandExists "gswin64c" # 64-bit Windows version
-    $gsUnix = Test-CommandExists "gsc" # Unix version
-    
-    return $gsCommand -or $gsUnix
+    # Check for various Ghostscript executable names across platforms
+    $gsWin64 = Test-CommandExists "gswin64c"  # 64-bit Windows version
+    $gsWin32 = Test-CommandExists "gswin32c"  # 32-bit Windows version
+    $gs = Test-CommandExists "gs"              # Common name on all platforms
+    $gsUnix = Test-CommandExists "gsc"         # Unix version
+
+    return $gsWin64 -or $gsWin32 -or $gs -or $gsUnix
 }
 
 # Метод для проверки git
@@ -155,4 +158,4 @@ function Exit-WithError {
 }
 
 
-Export-ModuleMember -Function Test-RequiredTools, Get-ToolCommand, Get-CrossPlatformPwsh, Exit-WithError, Test-CommandExists
+Export-ModuleMember -Function Test-RequiredTools, Get-ToolCommand, Get-CrossPlatformPwsh, Exit-WithError, Test-CommandExists, Test-ImageMagick, Test-Ghostscript, Test-Git, Install-RequiredTools
