@@ -82,7 +82,8 @@ Invoke-Pester ./tests/
 - `ScanFileHelper.psm1` - File scanning and metadata extraction
 - `JsonHelper.psm1` - JSON processing and validation
 - `PathHelper.psm1` - Path resolution and validation (supports UNC network paths)
-- `ConvertImage.psm1` - Image conversion and optimization
+- `ConvertImage.psm1` - Image conversion and optimization (ImageMagick/Ghostscript)
+- `ConvertImage-Modern.psm1` - Modern image processing (Poppler/libvips) - drop-in replacement
 - `ConvertText.psm1` - Text processing and transliteration
 - `ToolsHelper.psm1` - System tool validation and utilities
 - `HashHelper.psm1` - MD5 hash generation for file indexing
@@ -117,11 +118,23 @@ Invoke-Pester ./tests/
 
 ## Dependencies
 
+### Required
 - PowerShell 7+ (cross-platform support via `Get-CrossPlatformPwsh`)
 - Git (for metadata repository management)
-- ImageMagick or similar (for image conversion)
 - GitLab CLI or API access (for merge request creation)
 - Pester (for running tests)
+
+### Image Processing (choose one stack)
+
+**Legacy Stack (Current):**
+- ImageMagick (for image conversion, resize, thumbnails)
+- Ghostscript (for PDF to TIFF conversion)
+
+**Modern Stack (Recommended):**
+- Poppler (`pdftoppm`) - for PDF to TIFF conversion (2x faster than Ghostscript)
+- libvips (`vips`, `vipsthumbnail`) - for image operations (4-8x faster, 15x less memory than ImageMagick)
+
+See [docs/QUICK-START-MODERN-TOOLS.md](docs/QUICK-START-MODERN-TOOLS.md) for installation and [docs/IMAGE-PROCESSING-MIGRATION.md](docs/IMAGE-PROCESSING-MIGRATION.md) for detailed migration guide.
 
 ## Script Details
 

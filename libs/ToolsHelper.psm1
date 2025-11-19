@@ -34,6 +34,18 @@ function Test-Git {
     return Test-CommandExists "git"
 }
 
+# Метод для проверки Poppler (pdftoppm)
+function Test-Poppler {
+    return Test-CommandExists "pdftoppm"
+}
+
+# Метод для проверки libvips
+function Test-Vips {
+    $vipsExists = Test-CommandExists "vips"
+    $vipsthumbnailExists = Test-CommandExists "vipsthumbnail"
+    return $vipsExists -and $vipsthumbnailExists
+}
+
 # Метод для установки необходимых инструментов при их отсутствии
 # Для установки используется Chocolatey
 function Install-RequiredTools {
@@ -99,7 +111,7 @@ function Test-RequiredTools {
 function Get-ToolCommand {
     param (
         [Parameter(Mandatory=$true)]
-        [ValidateSet('ImageMagick', 'GhostScript')]
+        [ValidateSet('ImageMagick', 'GhostScript', 'Poppler', 'Vips', 'VipsThumbnail')]
         [string]$Tool
     )
 
@@ -125,6 +137,33 @@ function Get-ToolCommand {
                 }
             }
             throw "GhostScript не установленна или не в PATH"
+        }
+        'Poppler' {
+            # Check for pdftoppm command
+            try {
+                $cmdPath = Get-Command 'pdftoppm' -ErrorAction Stop
+                return $cmdPath.Name
+            } catch {
+                throw "Poppler (pdftoppm) не установлен или не в PATH. Установите: macOS: brew install poppler, Windows: scoop install poppler"
+            }
+        }
+        'Vips' {
+            # Check for vips command
+            try {
+                $cmdPath = Get-Command 'vips' -ErrorAction Stop
+                return $cmdPath.Name
+            } catch {
+                throw "libvips не установлен или не в PATH. Установите: macOS: brew install vips, Windows: скачайте с https://github.com/libvips/libvips/releases"
+            }
+        }
+        'VipsThumbnail' {
+            # Check for vipsthumbnail command
+            try {
+                $cmdPath = Get-Command 'vipsthumbnail' -ErrorAction Stop
+                return $cmdPath.Name
+            } catch {
+                throw "vipsthumbnail не установлен или не в PATH. Установите: macOS: brew install vips, Windows: скачайте с https://github.com/libvips/libvips/releases"
+            }
         }
     }
 }
@@ -158,4 +197,4 @@ function Exit-WithError {
 }
 
 
-Export-ModuleMember -Function Test-RequiredTools, Get-ToolCommand, Get-CrossPlatformPwsh, Exit-WithError, Test-CommandExists, Test-ImageMagick, Test-Ghostscript, Test-Git, Install-RequiredTools
+Export-ModuleMember -Function Test-RequiredTools, Get-ToolCommand, Get-CrossPlatformPwsh, Exit-WithError, Test-CommandExists, Test-ImageMagick, Test-Ghostscript, Test-Git, Test-Poppler, Test-Vips, Install-RequiredTools
