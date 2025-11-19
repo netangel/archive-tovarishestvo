@@ -98,6 +98,11 @@ Describe "End-to-End Script Tests" {
         $dir1 = Join-Path $script:resultPath "testovayapapka1"
         @(Get-ChildItem -Path $dir1 -Filter "*.tif").Count | Should -BeGreaterThan 0
         @(Get-ChildItem -Path $dir1 -Filter "*.png").Count | Should -BeGreaterThan 0
+
+        # Verify thumbnails subdirectory and files were created
+        $thumbnailsDir = Join-Path $dir1 "thumbnails"
+        Test-Path $thumbnailsDir | Should -BeTrue
+        @(Get-ChildItem -Path $thumbnailsDir -Filter "*.png").Count | Should -BeGreaterThan 0
     }
 
     It "ConvertTo-ZolaContent.ps1 converts JSON metadata to Zola markdown files" {
