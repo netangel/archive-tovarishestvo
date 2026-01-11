@@ -3,5 +3,7 @@
   "ResultPath": "\\\\pomor_schooner\\drawings\\public\\archive",
   "ZolaContentPath": "none",
   "GitRepoUrl": "git@gitlab.com:solombala-archive/metadata.git",
-  "GitlabProjectId": "69777976"
+  "GitServerType": "GitLab",
+  "GitServerUrl": "https://gitlab.com",
+  "GitProjectId": "69777976"
 }
