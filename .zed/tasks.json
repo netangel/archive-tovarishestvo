@@ -1,0 +1,82 @@
+[
+  {
+    "label": "Run All Tests",
+    "command": "pwsh",
+    "args": ["-Command", "Invoke-Pester ./tests/ -Output Detailed"],
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "hide": "never",
+    "tags": ["test-all"]
+  },
+  {
+    "label": "Run Current Test File",
+    "command": "pwsh",
+    "args": ["-Command", "Invoke-Pester $ZED_FILE -Output Detailed"],
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "hide": "never",
+    "tags": ["test-file"]
+  },
+  {
+    "label": "Run E2E Image Processing Tests",
+    "command": "pwsh",
+    "args": ["-Command", "Invoke-Pester ./tests/E2E-ImageProcessing.Tests.ps1 -Output Detailed"],
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "hide": "never",
+    "tags": ["test-e2e"]
+  },
+  {
+    "label": "Run JsonHelper Tests",
+    "command": "pwsh",
+    "args": ["-Command", "Invoke-Pester ./tests/JsonHelper.Tests.ps1 -Output Detailed"],
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "hide": "never",
+    "tags": ["test-unit"]
+  },
+  {
+    "label": "Run PathHelper Tests",
+    "command": "pwsh",
+    "args": ["-Command", "Invoke-Pester ./tests/PathHelper.Tests.ps1 -Output Detailed"],
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "hide": "never",
+    "tags": ["test-unit"]
+  },
+  {
+    "label": "Run ScanFileHelper Tests",
+    "command": "pwsh",
+    "args": ["-Command", "Invoke-Pester ./tests/ScanFileHelper.Tests.ps1 -Output Detailed"],
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "hide": "never",
+    "tags": ["test-unit"]
+  },
+  {
+    "label": "Run Convert-ToZola Tests",
+    "command": "pwsh",
+    "args": ["-Command", "Invoke-Pester ./tests/Convert-ToZola.Tests.ps1 -Output Detailed"],
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "hide": "never",
+    "tags": ["test-unit"]
+  },
+  {
+    "label": "Debug Current Test File (Verbose)",
+    "command": "pwsh",
+    "args": ["-Command", "Invoke-Pester $ZED_FILE -Output Diagnostic"],
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "hide": "never",
+    "tags": ["test-debug"]
+  }
+]

@@ -111,8 +111,7 @@ Invoke-Pester ./tests/HashHelper.Tests.ps1
 1. Создать аккаунт на gitlab.com
 2. Создать ssh ключ для пользователя
 ```ssh-keygen -f ~/.ssh/solombala-gitlab -t ed25519 -C "Key for solombala archive"```
-
-    2.1 добавить ключ и имя пользователя в `.ssh/config` файл
+3. добавить ключ и имя пользователя в `.ssh/config` файл
     ```
     #GitLab.com
     Host gitlab.com
@@ -120,8 +119,8 @@ Invoke-Pester ./tests/HashHelper.Tests.ps1
   	    PreferredAuthentications publickey
   	    IdentityFile ~/.ssh/solombala-gitlab
     ```
-3. Загрузить ключ в аккаунт gitlab.com
-4. Проверить, что ключ работает: `ssh -T git@gitlab.com`
+4. Загрузить ключ в аккаунт gitlab.com
+5. Проверить, что ключ работает: `ssh -T git@gitlab.com`
 
 ##### Репозиторий в папке metadata
 

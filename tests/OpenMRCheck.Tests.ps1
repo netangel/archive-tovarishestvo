@@ -1,28 +1,40 @@
 BeforeAll {
-    Import-Module $PSScriptRoot/../libs/GitHelper.psm1 -Force
+    Import-Module $PSScriptRoot/../libs/GitServerProvider.psm1 -Force
 }
 
 Describe 'Test-OpenMergeRequests Function Tests' {
-    BeforeEach {
+    BeforeAll {
         # Mock Write-Host in the GitHelper module to suppress console output during tests
-        Mock Write-Host -ModuleName GitHelper {}
+        Mock Write-Host -ModuleName GitServerProvider {}
+
+        # Default GitLab server URL and project ID
+        $script:gitServerUrl = "https://gitlab.com"
+        $script:projectId = "12345"
+        $script:accessToken = "test-token"
+
+        # Create a GitServerProvider instance for GitLab
+        $script:gitServiceProvider = New-GitServerProvider -ProviderType "GitLab" `
+            -ServerUrl $script:gitServerUrl `
+            -ProjectId $script:projectId `
+            -AccessToken $script:accessToken `
+            -Verbose:$false
     }
 
     Context 'When no open merge requests exist' {
         It 'Should return false when API returns empty array' {
             # Arrange
-            Mock Invoke-RestMethod -ModuleName GitHelper {
+            Mock Invoke-RestMethod -ModuleName GitServerProvider {
                 return @()
             }
 
             # Act
-            $result = Test-OpenMergeRequests -ProjectId "12345" -AccessToken "test-token"
+            $result = Test-OpenMergeRequests -Provider $script:gitServiceProvider
 
             # Assert
             $result | Should -Be $false
 
             # Verify the API was called with correct parameters
-            Should -Invoke Invoke-RestMethod -ModuleName GitHelper -Exactly 1 -ParameterFilter {
+            Should -Invoke Invoke-RestMethod -ModuleName GitServerProvider -Exactly 1 -ParameterFilter {
                 $Uri -eq "https://gitlab.com/api/v4/projects/12345/merge_requests?state=opened" -and
                 $Method -eq "Get" -and
                 $Headers["PRIVATE-TOKEN"] -eq "test-token"
@@ -33,7 +45,7 @@ Describe 'Test-OpenMergeRequests Function Tests' {
     Context 'When open merge requests exist' {
         It 'Should return true when API returns one open MR' {
             # Arrange
-            Mock Invoke-RestMethod -ModuleName GitHelper {
+            Mock Invoke-RestMethod -ModuleName GitServerProvider {
                 return @(
                     @{
                         iid = 42
@@ -46,7 +58,7 @@ Describe 'Test-OpenMergeRequests Function Tests' {
             }
 
             # Act
-            $result = Test-OpenMergeRequests -ProjectId "12345" -AccessToken "test-token"
+            $result = Test-OpenMergeRequests -Provider $script:gitServiceProvider
 
             # Assert
             $result | Should -Be $true
@@ -54,7 +66,7 @@ Describe 'Test-OpenMergeRequests Function Tests' {
 
         It 'Should return true when API returns multiple open MRs' {
             # Arrange
-            Mock Invoke-RestMethod -ModuleName GitHelper {
+            Mock Invoke-RestMethod -ModuleName GitServerProvider {
                 return @(
                     @{
                         iid = 42
@@ -74,7 +86,7 @@ Describe 'Test-OpenMergeRequests Function Tests' {
             }
 
             # Act
-            $result = Test-OpenMergeRequests -ProjectId "12345" -AccessToken "test-token"
+            $result = Test-OpenMergeRequests -Provider $script:gitServiceProvider
 
             # Assert
             $result | Should -Be $true
@@ -82,7 +94,7 @@ Describe 'Test-OpenMergeRequests Function Tests' {
 
         It 'Should display details of all open MRs' {
             # Arrange
-            Mock Invoke-RestMethod -ModuleName GitHelper {
+            Mock Invoke-RestMethod -ModuleName GitServerProvider {
                 return @(
                     @{
                         iid = 42
@@ -95,43 +107,14 @@ Describe 'Test-OpenMergeRequests Function Tests' {
             }
 
             # Act
-            $result = Test-OpenMergeRequests -ProjectId "12345" -AccessToken "test-token"
+            Test-OpenMergeRequests -Provider $script:gitServiceProvider
 
             # Assert
-            Should -Invoke Write-Host -ModuleName GitHelper -ParameterFilter {
+            Should -Invoke Write-Host -ModuleName GitServerProvider -ParameterFilter {
                 $Object -match "MR !42: Test MR"
             }
-            Should -Invoke Write-Host -ModuleName GitHelper -ParameterFilter {
+            Should -Invoke Write-Host -ModuleName GitServerProvider -ParameterFilter {
                 $Object -match "feature -> main"
-            }
-        }
-    }
-
-    Context 'When using custom GitLab URL' {
-        It 'Should use custom GitLab URL when provided' {
-            # Arrange
-            Mock Invoke-RestMethod -ModuleName GitHelper { return @() }
-            $customUrl = "https://gitlab.example.com"
-
-            # Act
-            Test-OpenMergeRequests -GitLabUrl $customUrl -ProjectId "12345" -AccessToken "test-token"
-
-            # Assert
-            Should -Invoke Invoke-RestMethod -ModuleName GitHelper -ParameterFilter {
-                $Uri -eq "$customUrl/api/v4/projects/12345/merge_requests?state=opened"
-            }
-        }
-
-        It 'Should use default GitLab URL when not provided' {
-            # Arrange
-            Mock Invoke-RestMethod -ModuleName GitHelper { return @() }
-
-            # Act
-            Test-OpenMergeRequests -ProjectId "12345" -AccessToken "test-token"
-
-            # Assert
-            Should -Invoke Invoke-RestMethod -ModuleName GitHelper -ParameterFilter {
-                $Uri -eq "https://gitlab.com/api/v4/projects/12345/merge_requests?state=opened"
             }
         }
     }
@@ -139,41 +122,41 @@ Describe 'Test-OpenMergeRequests Function Tests' {
     Context 'When API call fails' {
         It 'Should return false and not throw when API returns error' {
             # Arrange
-            Mock Invoke-RestMethod -ModuleName GitHelper {
+            Mock Invoke-RestMethod -ModuleName GitServerProvider {
                 throw "API Error: Unauthorized"
             }
 
             # Act
-            $result = Test-OpenMergeRequests -ProjectId "12345" -AccessToken "invalid-token"
+            $result = Test-OpenMergeRequests -Provider $script:gitServiceProvider
 
             # Assert
             $result | Should -Be $false
 
             # Should display warning message
-            Should -Invoke Write-Host -ModuleName GitHelper -ParameterFilter {
+            Should -Invoke Write-Host -ModuleName GitServerProvider -ParameterFilter {
                 $Object -match "Не удалось проверить открытые merge запросы"
             }
         }
 
         It 'Should handle network timeout gracefully' {
             # Arrange
-            Mock Invoke-RestMethod -ModuleName GitHelper {
+            Mock Invoke-RestMethod -ModuleName GitServerProvider {
                 throw [System.Net.WebException]::new("The operation has timed out")
             }
 
             # Act & Assert - should not throw
-            { Test-OpenMergeRequests -ProjectId "12345" -AccessToken "test-token" } | Should -Not -Throw
+            { Test-OpenMergeRequests -Provider $script:gitServiceProvider } | Should -Not -Throw
         }
 
         It 'Should handle 404 error gracefully' {
             # Arrange
-            Mock Invoke-RestMethod -ModuleName GitHelper {
+            Mock Invoke-RestMethod -ModuleName GitServerProvider {
                 $exception = New-Object System.Exception("404 Not Found")
                 throw $exception
             }
 
             # Act
-            $result = Test-OpenMergeRequests -ProjectId "99999" -AccessToken "test-token"
+            $result = Test-OpenMergeRequests -Provider $script:gitServiceProvider
 
             # Assert
             $result | Should -Be $false
@@ -183,27 +166,26 @@ Describe 'Test-OpenMergeRequests Function Tests' {
     Context 'Request headers and authentication' {
         It 'Should include correct authentication header' {
             # Arrange
-            Mock Invoke-RestMethod -ModuleName GitHelper { return @() }
-            $testToken = "secret-token-12345"
+            Mock Invoke-RestMethod -ModuleName GitServerProvider { return @() }
 
             # Act
-            Test-OpenMergeRequests -ProjectId "12345" -AccessToken $testToken
+            Test-OpenMergeRequests -Provider $script:gitServiceProvider
 
             # Assert
-            Should -Invoke Invoke-RestMethod -ModuleName GitHelper -ParameterFilter {
-                $Headers["PRIVATE-TOKEN"] -eq $testToken
+            Should -Invoke Invoke-RestMethod -ModuleName GitServerProvider -ParameterFilter {
+                $Headers["PRIVATE-TOKEN"] -eq $script:accessToken
             }
         }
 
         It 'Should include Content-Type header' {
             # Arrange
-            Mock Invoke-RestMethod -ModuleName GitHelper { return @() }
+            Mock Invoke-RestMethod -ModuleName GitServerProvider { return @() }
 
             # Act
-            Test-OpenMergeRequests -ProjectId "12345" -AccessToken "test-token"
+            Test-OpenMergeRequests -Provider $script:gitServiceProvider
 
             # Assert
-            Should -Invoke Invoke-RestMethod -ModuleName GitHelper -ParameterFilter {
+            Should -Invoke Invoke-RestMethod -ModuleName GitServerProvider -ParameterFilter {
                 $Headers["Content-Type"] -eq "application/json"
             }
         }
@@ -212,13 +194,13 @@ Describe 'Test-OpenMergeRequests Function Tests' {
     Context 'Query parameter validation' {
         It 'Should query only for opened state merge requests' {
             # Arrange
-            Mock Invoke-RestMethod -ModuleName GitHelper { return @() }
+            Mock Invoke-RestMethod -ModuleName GitServerProvider { return @() }
 
             # Act
-            Test-OpenMergeRequests -ProjectId "12345" -AccessToken "test-token"
+            Test-OpenMergeRequests -Provider $script:gitServiceProvider
 
             # Assert
-            Should -Invoke Invoke-RestMethod -ModuleName GitHelper -ParameterFilter {
+            Should -Invoke Invoke-RestMethod -ModuleName GitServerProvider -ParameterFilter {
                 $Uri -match "state=opened"
             }
         }
