@@ -1,4 +1,5 @@
 BeforeAll {
+    Import-Module $PSScriptRoot/../libs/GitHelper.psm1 -Force
     Import-Module $PSScriptRoot/../libs/GitServerProvider.psm1 -Force
 }
 
