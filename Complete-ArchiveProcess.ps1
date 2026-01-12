@@ -7,85 +7,70 @@ if ($VerbosePreference -eq "Continue") {
     $env:PARENT_VERBOSE = "true"
 }
 
-# Загрузим настройки  
-$config = Get-Content "config.json" | ConvertFrom-Json -AsHashtable
+# ============================================================================
+# Environment and Configuration Validation
+# ============================================================================
+Write-Host "🔍 Validating environment and configuration..." -ForegroundColor Cyan
 
-$requiredPaths = [ordered]@{
-    SourcePath = "Корневая директория с отсканированными чертежами"
-    ResultPath = "Директория с чертежами для публикации"
-}
-
+# Import required modules for the main process
 Import-Module (Join-Path $PSScriptRoot "libs/ToolsHelper.psm1")  -Force
 Import-Module (Join-Path $PSScriptRoot "libs/PathHelper.psm1")   -Force
 Import-Module (Join-Path $PSScriptRoot "libs/GitHelper.psm1")    -Force
+Import-Module (Join-Path $PSScriptRoot "libs/GitServerProvider.psm1") -Force
 
-$results = $requiredPaths.Keys | ForEach-Object {
-    $key = $_
-    $path = ([string]::IsNullOrWhiteSpace($config[$key])) ? ( Read-Host $requiredPaths[$key] ) : $config[$key]
+$pwshPath = Get-CrossPlatformPwsh
 
-    try {
-        [PSCustomObject]@{
-            Type = 'Checked'
-            OriginalPath = $key
-            Result = Test-RequiredPathsAndReturn $path $PSScriptRoot 
-            Error = $null
-        }
+# Run the validation script and capture JSON output
+try {
+    $validationJson = & $pwshPath -File "./Test-EnvironmentConfiguration.ps1" 2>&1 | Where-Object { $_ -match '^\s*[\{\[]' }
+
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host ""
+        Write-Host "❌ Environment validation failed" -ForegroundColor Red
+        exit 1
     }
-    catch {
-        [PSCustomObject]@{
-            Type = 'Error'
-            OriginalPath = $key
-            Result = $null
-            Error = $_.Exception.Message
-        }
-    }
-} | Group-Object Type -AsHashTable
 
-# Проверим путь к папке метаданных
-$goodResultPath = $results['Checked'] | Where-Object { $_.OriginalPath -eq "ResultPath" }
-$FullMetadataPath = $null
-if ($goodResultPath) {
-    $FullMetadataPath = Join-Path $goodResultPath.Result $MetadataDir
-    if (-not (Test-Path $FullMetadataPath))
-    {
-        New-Item -Path $goodResultPath.Result -ItemType Directory -Name $MetadataDir | Out-Null
-    }
-}
+    $validationResult = $validationJson | ConvertFrom-Json
 
-# Если есть ошибки при проверки папок, покажем их и завершим работу
-$errors = $results['Error']
-if ($errors.Count -gt 0)
-{
-    Write-Host "`n❌ Папки не существуют: ($($errors.Count)):" -ForegroundColor Red  
-    $errors | ForEach-Object { Write-Host "  $($_.OriginalPath): $($_.Error)" }
-    
+    # Extract validated paths
+    $validatedSourcePath = $validationResult.Paths.SourcePath
+    $validatedResultPath = $validationResult.Paths.ResultPath
+    $FullMetadataPath = $validationResult.Paths.MetadataPath
+
+    Write-Host "✅ Environment validation passed" -ForegroundColor Green
+    Write-Host ""
+
+} catch {
+    Write-Host ""
+    Write-Host "❌ Environment validation failed: $($_.Exception.Message)" -ForegroundColor Red
     exit 1
 }
 
-$results['Checked'] | ForEach-Object {
-    Write-Host "📂 Путь $($_.OriginalPath) указан как: $($_.Result)" -ForegroundColor Green
-    $config[$_.OriginalPath] = $_.Result
+# Reload configuration (in case it was updated by the validation script)
+$config = Get-Content "config.json" | ConvertFrom-Json -AsHashtable
+
+# Create Git service provider if git checks passed
+$gitProvider = $null
+if ($validationResult.IsGitProviderAvailable) {
+    $gitServerType = $config['GitServerType']
+    $gitServerUrl = $config['GitServerUrl']
+    $gitProjectId = $config['GitProjectId']
+
+    $accessToken = switch ($gitServerType) {
+        "GitLab" { $env:GITLAB_TOKEN }
+        "Gitea" { $env:GITEA_TOKEN }
+        default { $null }
+    }
+
+    if ($accessToken) {
+        $gitProvider = New-GitServerProvider -ProviderType $gitServerType `
+                                             -ServerUrl $gitServerUrl `
+                                             -ProjectId $gitProjectId `
+                                             -AccessToken $accessToken
+    }
 }
 
-# Проверим, если установлены необходимые инструменты
-if (-not (Test-RequiredTools)) {
-    Write-Warning "❌ Необходимые инструменты не установлены. Скрипт завершает работу."
-    exit 1
-}
-
-# Проверим состояние репозитория в папке метаданных
-# Если репозитарий есть – обновим основную ветку и создадим новую, 
-# для отcлеживания результатов обработки
 $metadataGitUrl = $config['GitRepoUrl']
-if ([string]::IsNullOrWhiteSpace($metadataGitUrl)) {
-    $metadataGitUrl = Read-Host "Адрес git репозитория для хранения метаданных"
-    $config['GitRepoUrl'] = $metadataGitUrl
-}
-
-Write-Host "🌍 Адрес репозитория git: $($metadataGitUrl)" -ForegroundColor Green
-
-# Сохраним конфигурацию
-$config | ConvertTo-Json | Out-File -FilePath "config.json" -Encoding UTF8
 
 Write-Host "🚀 Начинаем процесс обработки отсканированных файлов" -ForegroundColor DarkYellow
 
@@ -106,26 +91,9 @@ if ($gitCheckProcess.ExitCode -ne 0) {
     exit 1
 }
 
-# Проверим наличие открытых merge запросов перед обработкой
-$projectId = $config['GitlabProjectId']
-$gitlabToken = $env:GITLAB_TOKEN
-
-if (-not [string]::IsNullOrWhiteSpace($projectId) -and -not [string]::IsNullOrWhiteSpace($gitlabToken)) {
-    $hasOpenMRs = Test-OpenMergeRequests -ProjectId $projectId -AccessToken $gitlabToken
-
-    if ($hasOpenMRs) {
-        Write-Host ""
-        Write-Host "❌ Обработка прервана: обнаружены открытые merge запросы" -ForegroundColor Red
-        Write-Host "   Пожалуйста, завершите ревью и слияние существующих MR перед началом новой обработки" -ForegroundColor Yellow
-        Write-Host ""
-        exit 1
-    }
-} else {
-    Write-Host "⚠️  Пропускаем проверку открытых MR: отсутствует GitlabProjectId или GITLAB_TOKEN" -ForegroundColor Yellow
-}
-
+# Начинаем конвертацию файлов
 $convertScansProcess = Start-Process -FilePath $pwshPath `
-        -ArgumentList "-File", "./Convert-ScannedFIles.ps1", "-SourcePath", $config['SourcePath'], "-ResultPath", $config['ResultPath'] `
+        -ArgumentList "-File", "./Convert-ScannedFIles.ps1", "-SourcePath", $validatedSourcePath, "-ResultPath", $validatedResultPath `
         -Wait -PassThru -NoNewWindow 
 
 if ($convertScansProcess.ExitCode -ne 0) {
@@ -143,10 +111,12 @@ if ($gitSubmitProcess.ExitCode -ne 0)
     exit 1
 }
 
-$projectId = $config['GitlabProjectId']
-if ([string]::IsNullOrWhiteSpace($projectId)) {
-    $projectId = Read-Host "ProjectId для рапозитория на Gitlab"
-    $config['GitRepoUrl'] = $projectId
-}
-
-New-GitLabMergeRequest -Branch $branchName -Title "Результаты обработки $timestamp" 
+# Создание merge/pull запроса
+if ($gitProvider) {
+    New-GitServerMergeRequest -Provider $gitProvider `
+                              -Branch $branchName `
+                              -Title "Результаты обработки $timestamp" `
+                              -TargetBranch "main"
+} else {
+    Write-Warning "⚠️  Git provider недоступен, пропускаем создание merge/pull запроса"
+} 
