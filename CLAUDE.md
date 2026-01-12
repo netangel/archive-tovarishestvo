@@ -8,6 +8,28 @@ This is a PowerShell-based archive processing system for the Solombala shipyard 
 
 ## Key Commands
 
+### Environment Validation
+```powershell
+# Validate environment and configuration before processing
+./Test-EnvironmentConfiguration.ps1
+
+# Validate with custom paths (will update config.json)
+./Test-EnvironmentConfiguration.ps1 -SourcePath "path/to/source" -ResultPath "path/to/results" -MetadataPath "path/to/metadata"
+
+# Validate without API connectivity checks (offline mode)
+./Test-EnvironmentConfiguration.ps1 -SkipGitServiceCheck
+```
+
+**Validation Script**: `Test-EnvironmentConfiguration.ps1` validates your environment before running the archive processing system:
+- Checks path existence and correctness (SourcePath, ResultPath, MetadataPath)
+- Validates MetadataPath ends with 'metadata' directory
+- Verifies required tools are installed (ImageMagick, Ghostscript, Git)
+- Checks Git repository in MetadataPath with correct remote origin
+- Validates Git service configuration (GitServerType, GitServerUrl, GitProjectId)
+- Checks environment variables for tokens (GITLAB_TOKEN or GITEA_TOKEN)
+- Tests Git service API connectivity and token permissions
+- See [docs/Test-EnvironmentConfiguration.md](docs/Test-EnvironmentConfiguration.md) for details
+
 ### Running Tests
 ```powershell
 # Run individual test files using Pester
@@ -16,6 +38,7 @@ Invoke-Pester ./tests/PathHelper.Tests.ps1
 Invoke-Pester ./tests/ScanFileHelper.Tests.ps1
 Invoke-Pester ./tests/RequiredPathsAndReturn.Tests.ps1
 Invoke-Pester ./tests/Convert-ToZola.Tests.ps1
+Invoke-Pester ./tests/Test-EnvironmentConfiguration.Tests.ps1
 
 # Run end-to-end tests (requires ImageMagick and Ghostscript)
 Invoke-Pester ./tests/E2E-ImageProcessing.Tests.ps1
@@ -68,6 +91,7 @@ Invoke-Pester ./tests/
 - Creates GitLab merge requests for processed results
 
 **Processing Scripts:**
+- `Test-EnvironmentConfiguration.ps1` - Validates environment and configuration setup
 - `Convert-ScannedFIles.ps1` - Converts PDF/TIFF files to optimized formats
 - `ConvertTo-ZolaContent.ps1` - Generates Zola static site content from metadata
 - `Sync-MetadataGitRepo.ps1` - Manages Git repository state and branching
@@ -94,7 +118,13 @@ Invoke-Pester ./tests/
 - `ResultPath` - Directory for processed results
 - `ZolaContentPath` - Directory for Zola site content
 - `GitRepoUrl` - Git repository URL for metadata storage
-- `GitlabProjectId` - GitLab project ID for merge requests
+- `GitServerType` - Git service provider type (`GitLab` or `Gitea`)
+- `GitServerUrl` - Git service URL (e.g., `https://gitlab.com`)
+- `GitProjectId` - Project ID for merge/pull requests
+
+**Environment Variables:**
+- `GITLAB_TOKEN` - Access token for GitLab API (when using GitLab)
+- `GITEA_TOKEN` - Access token for Gitea API (when using Gitea)
 
 ### Directory Structure
 
@@ -111,9 +141,10 @@ Invoke-Pester ./tests/
 ## Development Workflow
 
 1. **Setup**: Configure `config.json` with appropriate paths and Git settings
-2. **Testing**: Run individual test files with `Invoke-Pester ./tests/[TestName].Tests.ps1`
-3. **Processing**: Use `Complete-ArchiveProcess.ps1` for full pipeline execution
-4. **Git Integration**: The system automatically creates branches and merge requests
+2. **Validation**: Run `./Test-EnvironmentConfiguration.ps1` to verify environment setup
+3. **Testing**: Run individual test files with `Invoke-Pester ./tests/[TestName].Tests.ps1`
+4. **Processing**: Use `Complete-ArchiveProcess.ps1` for full pipeline execution
+5. **Git Integration**: The system automatically creates branches and merge requests
 
 ## Dependencies
 
