@@ -10,7 +10,7 @@
             "type": "PowerShell",
             "request": "launch",
             "script": "${file}",
-            "args": [ "-SourcePath ../test-data/source/", "-ResultPath ../test-data/results/" ]
+            "args": [ "-Verbose" ]
         },
         {
             "name": "PowerShell: Run index and tags creation",

@@ -1,9 +1,9 @@
 {
   "SourcePath": "\\\\pomor_schooner\\drawings\\done",
   "ResultPath": "\\\\pomor_schooner\\drawings\\public\\archive",
-  "ZolaContentPath": "none",
-  "GitRepoUrl": "git@gitlab.com:solombala-archive/metadata.git",
-  "GitServerType": "GitLab",
-  "GitServerUrl": "https://gitlab.com",
-  "GitProjectId": "69777976"
+
+  "GitRepoUrl": "ssh://git@git.dwal.in:22022/solombala-archive/metadata.git",
+  "GitServerType": "Gitea",
+  "GitServerUrl": "https://git.dwal.in",
+  "GitProjectId": "solombala-archive/metadata"
 }
