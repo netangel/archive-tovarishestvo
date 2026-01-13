@@ -116,7 +116,6 @@ Invoke-Pester ./tests/
 **config.json** - Main configuration file containing:
 - `SourcePath` - Directory with scanned documents
 - `ResultPath` - Directory for processed results
-- `ZolaContentPath` - Directory for Zola site content
 - `GitRepoUrl` - Git repository URL for metadata storage
 - `GitServerType` - Git service provider type (`GitLab` or `Gitea`)
 - `GitServerUrl` - Git service URL (e.g., `https://gitlab.com`)

@@ -20,16 +20,21 @@ Import-Module (Join-Path $PSScriptRoot "libs/GitServerProvider.psm1") -Force
 
 $pwshPath = Get-CrossPlatformPwsh
 
-# Run the validation script and capture JSON output
+# Run the validation script and capture all output
+$validationOutput = & $pwshPath -File "./Test-EnvironmentConfiguration.ps1" 2>&1
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Host ""
+    Write-Host "❌ Environment validation failed" -ForegroundColor Red
+    Write-Host ""
+    # Display the captured error output
+    $validationOutput | ForEach-Object { Write-Host $_ -ForegroundColor Red }
+    exit 1
+}
+
+# Parse the JSON output
 try {
-    $validationJson = & $pwshPath -File "./Test-EnvironmentConfiguration.ps1" 2>&1 | Where-Object { $_ -match '^\s*[\{\[]' }
-
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host ""
-        Write-Host "❌ Environment validation failed" -ForegroundColor Red
-        exit 1
-    }
-
+    $validationJson = $validationOutput | Where-Object { $_ -match '^\s*[\{\[]' }
     $validationResult = $validationJson | ConvertFrom-Json
 
     # Extract validated paths
@@ -42,7 +47,7 @@ try {
 
 } catch {
     Write-Host ""
-    Write-Host "❌ Environment validation failed: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "❌ Failed to parse validation output: $($_.Exception.Message)" -ForegroundColor Red
     exit 1
 }
 
@@ -76,8 +81,6 @@ Write-Host "🚀 Начинаем процесс обработки отскан
 
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $branchName = "processing-results-$timestamp"
-
-$pwshPath = Get-CrossPlatformPwsh
 
 $gitCheckProcess = Start-Process -FilePath $pwshPath `
         -ArgumentList "-File", "./Sync-MetadataGitRepo.ps1", "-GitDirectory", $FullMetadataPath, "-UpstreamUrl", $metadataGitUrl, `

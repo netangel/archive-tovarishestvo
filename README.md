@@ -43,7 +43,6 @@ cd generationscript
 {
   "SourcePath": "/path/to/scanned/files",
   "ResultPath": "/path/to/results",
-  "ZolaContentPath": "/path/to/site/content",
   "GitRepoUrl": "git@gitlab.com:solombala-archive/metadata.git",
   "GitlabProjectId": "your-project-id"
 }
