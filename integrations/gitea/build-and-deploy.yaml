@@ -5,7 +5,7 @@
 #   .gitea/workflows/build-and-deploy.yaml
 #
 # Required secrets:
-#   - GITEA_TOKEN: Token with read:package permission (for pulling container image)
+#   - CONTAINER_TOKEN: Token with read:package permission (for pulling container image)
 #   - AWS_ACCESS_KEY_ID: S3 access key
 #   - AWS_SECRET_ACCESS_KEY: S3 secret key
 #
@@ -41,7 +41,7 @@ jobs:
       image: ${{ gitea.server_url }}/${{ gitea.repository }}/zola-pwsh-s3:latest
       credentials:
         username: ${{ gitea.actor }}
-        password: ${{ secrets.GITEA_TOKEN }}
+        password: ${{ secrets.CONTAINER_TOKEN }}
 
     steps:
       - name: Checkout metadata repository

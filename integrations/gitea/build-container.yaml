@@ -24,7 +24,7 @@ on:
 
 env:
   IMAGE_NAME: zola-pwsh-s3
-  REGISTRY: ${{ gitea.server_url }}
+  REGISTRY_HOST: git.dwal.in
 
 jobs:
   build-container:
@@ -34,21 +34,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
+      - name: Set up Docker Build
         uses: docker/setup-buildx-action@v3
 
       - name: Login to Gitea Container Registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ${{ env.REGISTRY_HOST }}
           username: ${{ gitea.actor }}
-          password: ${{ secrets.GITEA_TOKEN }}
+          password: ${{ secrets.CONTAINER_TOKEN }}
 
       - name: Extract metadata for Docker
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ gitea.repository }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY_HOST }}/${{ gitea.repository }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest
             type=sha,prefix=
@@ -61,5 +61,3 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max

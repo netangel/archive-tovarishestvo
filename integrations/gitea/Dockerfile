@@ -3,11 +3,11 @@
 
 FROM alpine:3.20 AS builder
 
-ARG ZOLA_VERSION=0.20.0
+ARG ZOLA_VERSION=0.22.0
 
 # Download and extract Zola
 RUN apk add --no-cache curl tar \
-    && curl -L "https://github.com/getzola/zola/releases/download/v${ZOLA_VERSION}/zola-v${ZOLA_VERSION}-x86_64-unknown-linux-gnu.tar.gz" | tar xz -C /usr/local/bin
+    && curl -L "https://github.com/getzola/zola/releases/download/v${ZOLA_VERSION}/zola-v${ZOLA_VERSION}-x86_64-unknown-linux-musl.tar.gz" | tar xz -C /usr/local/bin
 
 # Final image based on PowerShell Alpine
 FROM mcr.microsoft.com/powershell:lts-alpine-3.20
