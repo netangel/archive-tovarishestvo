@@ -30,17 +30,18 @@ try
         New-Item -ItemType Directory -Path $ZolaContentPath -Force | Out-Null
     }
 
-    # Remove only dynamically generated content (directories created from JSON metadata)
-    # Preserve static pages like 'about' that exist in the template repository
-    Get-ChildItem -Path $MetadataPath -Filter "*.json" -Recurse
-    | Where-Object { $_.FullName -notmatch [regex]::Escape([IO.Path]::DirectorySeparatorChar + "scripts" + [IO.Path]::DirectorySeparatorChar) }
-    | ForEach-Object {
-        $jsonContent = Get-Content $_.FullName -Raw -Encoding utf8 | ConvertFrom-Json
-        $directory = $jsonContent.Directory
-        $dynamicPath = Join-Path $ZolaContentPath $directory
-        if (Test-Path $dynamicPath)
+    # Remove old metadata directories while preserving static pages
+    # Strategy: Delete all directories except those in current metadata or known static pages
+    # Known static directories to preserve (from template repository)
+    $staticDirs = @('about', 'contact')
+
+    # Remove directories that are not in current metadata and not static
+    Get-ChildItem -Path $ZolaContentPath -Directory | ForEach-Object {
+        $dirName = $_.Name
+        if ($dirName -notin $staticDirs)
         {
-            Remove-Item -Path $dynamicPath -Recurse -Force
+            Write-Host "Removing old metadata directory: $dirName"
+            Remove-Item -Path $_.FullName -Recurse -Force
         }
     }
 
