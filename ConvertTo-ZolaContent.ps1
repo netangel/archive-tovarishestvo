@@ -10,24 +10,42 @@ Param(
 Import-Module (Join-Path $PSScriptRoot "libs/ZolaContentHelper.psm1") -Force
 
 # Validate input paths
-if (-not (Test-Path $MetadataPath) -or -not (Test-Path $MetadataPath -PathType Container)) {
+if (-not (Test-Path $MetadataPath) -or -not (Test-Path $MetadataPath -PathType Container))
+{
     throw "Metadata path '$MetadataPath' does not exist"
 }
 
 # Проверим, если папка содержимого сайта существует, иначе создадим ее
-if (-not (Test-Path $ZolaContentPath)) {
+if (-not (Test-Path $ZolaContentPath))
+{
     New-Item -Path $ZolaContentPath -ItemType Directory | Out-Null
 }
 
 # Main execution
-try {
-    # Ensure output directory exists and is empty
-    if (Test-Path $ZolaContentPath) {
-        Remove-Item -Path $ZolaContentPath -Recurse -Force
+try
+{
+    # Ensure output directory exists
+    if (-not (Test-Path $ZolaContentPath))
+    {
+        New-Item -ItemType Directory -Path $ZolaContentPath -Force | Out-Null
     }
-    New-Item -ItemType Directory -Path $ZolaContentPath -Force | Out-Null
 
-    # Create root _index.md
+    # Remove old metadata directories while preserving static pages
+    # Strategy: Delete all directories except those in current metadata or known static pages
+    # Known static directories to preserve (from template repository)
+    $staticDirs = @('about', 'contact')
+
+    # Remove directories that are not in current metadata and not static
+    Get-ChildItem -Path $ZolaContentPath -Directory | ForEach-Object {
+        $dirName = $_.Name
+        if ($dirName -notin $staticDirs)
+        {
+            Write-Host "Removing old metadata directory: $dirName"
+            Remove-Item -Path $_.FullName -Recurse -Force
+        }
+    }
+
+    # Create or update root _index.md
     New-RootIndexPage -OutputPath $ZolaContentPath
 
     # Process all JSON files
@@ -37,8 +55,8 @@ try {
         Write-Host "Processing $($_.FullName)"
         Format-JsonFileIntoContent -JsonPath $_.FullName -OutputPath $ZolaContentPath
     }
-}
-catch {
+} catch
+{
     Write-Error "Error processing files: $_"
     exit 1
 }

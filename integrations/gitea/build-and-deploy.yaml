@@ -1,0 +1,104 @@
+# Gitea Actions workflow for building and deploying Zola site from metadata
+# This workflow runs in the metadata repository when changes are merged to main
+#
+# Place this file in the metadata repository:
+#   .gitea/workflows/build-and-deploy.yaml
+#
+# Required secrets:
+#   - CONTAINER_TOKEN: Token with read:package permission (for pulling container image)
+#   - AWS_ACCESS_KEY_ID: S3 access key
+#   - AWS_SECRET_ACCESS_KEY: S3 secret key
+#
+# Required variables (set in repo settings):
+#   - TEMPLATES_REPO_URL: URL to templates repository (https)
+#   - SCRIPTS_REPO_URL: URL to scripts repository (https)
+#   - S3_ENDPOINT: S3 endpoint URL (e.g., garage.example.com)
+#   - S3_BUCKET: Target S3 bucket name
+
+name: Build and Deploy Site
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "Dockerfile"
+      - ".gitea/workflows/build-container.yaml"
+  workflow_dispatch:
+
+env:
+  REGISTRY_HOST: git.dwal.in
+  IMAGE_NAME: zola-pwsh-s3
+  TEMPLATES_REPO_URL: ${{ vars.TEMPLATES_REPO_URL }}
+  SCRIPTS_REPO_URL: ${{ vars.SCRIPTS_REPO_URL }}
+  S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
+  S3_BUCKET: ${{ vars.S3_BUCKET }}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    # Use custom container with PowerShell, Zola, AWS CLI, Git pre-installed
+    # Built by build-container.yaml workflow from integrations/gitea/Dockerfile
+    container:
+      image: ${{ env.REGISTRY_HOST }}/${{ gitea.repository }}/${{ env.IMAGE_NAME }}:latest
+      credentials:
+        username: ${{ gitea.actor }}
+        password: ${{ secrets.CONTAINER_TOKEN }}
+
+    steps:
+      - name: Checkout metadata repository
+        uses: actions/checkout@v4
+        with:
+          path: metadata
+
+      - name: Clone templates repository
+        run: |
+          echo "Cloning templates from $TEMPLATES_REPO_URL"
+          git clone "$TEMPLATES_REPO_URL" template
+
+      - name: Clone scripts repository
+        run: |
+          echo "Cloning scripts from $SCRIPTS_REPO_URL"
+          git clone "$SCRIPTS_REPO_URL" scripts
+
+      - name: Convert metadata to Zola content
+        run: |
+          echo "Running PowerShell conversion script"
+          pwsh -File "./scripts/ConvertTo-ZolaContent.ps1" \
+            -MetadataPath "./metadata" \
+            -ZolaContentPath "./template/content"
+
+      - name: Build Zola site
+        run: |
+          cd template
+          zola build
+          echo "Site built successfully"
+          ls -la public/
+
+      - name: Configure AWS CLI for S3
+        run: |
+          mkdir -p ~/.aws
+          cat > ~/.aws/credentials << EOF
+          [default]
+          aws_access_key_id = ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key = ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          EOF
+          cat > ~/.aws/config << EOF
+          [default]
+          region = garage
+          output = json
+          s3 =
+            max_concurrent_requests = 20
+            max_queue_size = 10000
+          EOF
+
+      - name: Upload to S3 (Garage)
+        run: |
+          echo "Uploading to s3://$S3_BUCKET with parallel transfers"
+          aws s3 sync ./template/public/ "s3://$S3_BUCKET/" \
+            --endpoint-url "https://$S3_ENDPOINT" \
+            --acl public-read \
+            --exclude "media/*" \
+            --delete \
+            --quiet
+          echo "Upload complete"
