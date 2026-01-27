@@ -27,6 +27,8 @@ on:
   workflow_dispatch:
 
 env:
+  REGISTRY_HOST: git.dwal.in
+  IMAGE_NAME: zola-pwsh-s3
   TEMPLATES_REPO_URL: ${{ vars.TEMPLATES_REPO_URL }}
   SCRIPTS_REPO_URL: ${{ vars.SCRIPTS_REPO_URL }}
   S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
@@ -38,7 +40,7 @@ jobs:
     # Use custom container with PowerShell, Zola, AWS CLI, Git pre-installed
     # Built by build-container.yaml workflow from integrations/gitea/Dockerfile
     container:
-      image: ${{ gitea.server_url }}/${{ gitea.repository }}/zola-pwsh-s3:latest
+      image: ${{ env.REGISTRY_HOST }}/${{ gitea.repository }}/${{ env.IMAGE_NAME }}:latest
       credentials:
         username: ${{ gitea.actor }}
         password: ${{ secrets.CONTAINER_TOKEN }}
@@ -85,13 +87,18 @@ jobs:
           [default]
           region = garage
           output = json
+          s3 =
+            max_concurrent_requests = 20
+            max_queue_size = 10000
           EOF
 
       - name: Upload to S3 (Garage)
         run: |
-          echo "Uploading to s3://$S3_BUCKET"
+          echo "Uploading to s3://$S3_BUCKET with parallel transfers"
           aws s3 sync ./template/public/ "s3://$S3_BUCKET/" \
             --endpoint-url "https://$S3_ENDPOINT" \
             --acl public-read \
-            --delete
+            --exclude "media/*" \
+            --delete \
+            --quiet
           echo "Upload complete"

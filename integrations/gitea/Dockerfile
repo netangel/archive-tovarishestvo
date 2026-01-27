@@ -15,18 +15,20 @@ FROM mcr.microsoft.com/powershell:lts-alpine-3.20
 # Copy Zola from builder
 COPY --from=builder /usr/local/bin/zola /usr/local/bin/zola
 
-# Install minimal dependencies: git, aws-cli (for S3), ca-certificates
+# Install minimal dependencies: git, aws-cli (for S3), ca-certificates, nodejs (for GitHub Actions)
 RUN apk add --no-cache \
     git \
     aws-cli \
     ca-certificates \
+    nodejs \
     && rm -rf /var/cache/apk/*
 
 # Verify installations
 RUN pwsh -Version \
     && zola --version \
     && aws --version \
-    && git --version
+    && git --version \
+    && node --version
 
 WORKDIR /workspace
 
