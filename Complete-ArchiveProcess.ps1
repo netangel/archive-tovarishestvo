@@ -108,6 +108,12 @@ $gitSubmitProcess = Start-Process -FilePath $pwshPath `
         -ArgumentList "-File", "./Submit-MetadataToRemote.ps1", "-GitDirectory", $FullMetadataPath, "-GitBranch", $branchName `
         -Wait -PassThru -NoNewWindow
 
+if ($gitSubmitProcess.ExitCode -eq 2)
+{
+    Write-Host "ℹ️  Нечего публиковать: изменений не обнаружено" -ForegroundColor Yellow
+    exit 0
+}
+
 if ($gitSubmitProcess.ExitCode -ne 0)
 {
     Write-Warning "❌ Не получилось создать и отправить список изменений"

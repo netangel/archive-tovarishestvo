@@ -46,3 +46,47 @@ Describe 'Invoke-GitOperation error handling' {
         }
     }
 }
+
+Describe 'Push-GitCommit' {
+    BeforeAll {
+        Mock Write-Host -ModuleName GitHelper {}
+    }
+
+    Context 'When the working tree has no changes to commit' {
+        BeforeAll {
+            $script:repoPath = Join-Path $TestDrive "no-changes-repo"
+            New-Item -Path $script:repoPath -ItemType Directory -Force | Out-Null
+
+            Push-Location $script:repoPath
+            try {
+                git init --quiet | Out-Null
+                git config user.email "test@example.com" | Out-Null
+                git config user.name "Test" | Out-Null
+                "content" | Set-Content -Path (Join-Path $script:repoPath "file.txt")
+                git add . | Out-Null
+                git commit -m "initial" --quiet | Out-Null
+            } finally {
+                Pop-Location
+            }
+        }
+
+        BeforeEach {
+            Push-Location $script:repoPath
+            Mock Invoke-GitOperation -ModuleName GitHelper {}
+        }
+
+        AfterEach {
+            Pop-Location
+        }
+
+        It 'Returns the no-change sentinel' {
+            $result = Push-GitCommit -BranchName "test-branch"
+            $result | Should -Be "NoChanges"
+        }
+
+        It 'Invokes no commit or push' {
+            Push-GitCommit -BranchName "test-branch" | Out-Null
+            Should -Invoke Invoke-GitOperation -ModuleName GitHelper -Exactly 0
+        }
+    }
+}

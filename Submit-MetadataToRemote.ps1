@@ -27,8 +27,13 @@ try {
 
     Add-AllNewFiles
 
-    Push-GitCommit $GitBranch
+    $pushResult = Push-GitCommit $GitBranch
 
+    if ($pushResult -eq "NoChanges") {
+        exit 2
+    }
+
+    exit 0
 }
 catch {
     Exit-WithError "Не удалось отправить метаданные в git-репозиторий: $($_.Exception.Message)"

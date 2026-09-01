@@ -175,12 +175,21 @@ function Push-GitCommit
 {
     param([string]$BranchName)
 
+    $statusResult = Invoke-GitCommand -Arguments @("status", "--porcelain")
+    if ([string]::IsNullOrWhiteSpace($statusResult.StdOut))
+    {
+        Write-Host "Нет изменений для отправки"
+        return "NoChanges"
+    }
+
     Invoke-GitOperation -Arguments @("commit", "-am", "`"Обновление метаданных при автоматической обработке`"") -OperationName "commit -am" `
         -PreOperation { Write-Host "Создадим git commit..." } `
         -PostOperation { Write-Host "Git commit готов..." } | Out-Null
 
     Invoke-GitOperation -Arguments @("push", "--set-upstream", "origin", $BranchName) -OperationName "push --set-upstream origin $BranchName" `
         -PostOperation { Write-Host "Отправили данные на сервер..." } | Out-Null
+
+    return "Pushed"
 }
 
 # Import the provider module
