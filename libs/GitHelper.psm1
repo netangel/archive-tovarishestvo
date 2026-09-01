@@ -80,7 +80,7 @@ function Invoke-GitOperation
 
     if (-not $result.Success -or -not $isValid)
     {
-        exit 1
+        throw "git $OperationName failed (exit $($result.ExitCode)): $($result.StdErr)"
     }
 
     # Execute post-operation logic

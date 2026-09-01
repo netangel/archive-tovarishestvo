@@ -11,6 +11,7 @@ if ($env:PARENT_VERBOSE -eq "true") {
 }
 
 Import-Module (Join-Path $PSScriptRoot "libs/GitHelper.psm1") -Force
+Import-Module (Join-Path $PSScriptRoot "libs/ToolsHelper.psm1") -Force
 
 try {
     if (-not (Test-Path $GitDirectory)) {
@@ -30,5 +31,5 @@ try {
 
 }
 catch {
-    <#Do this if a terminating exception happens#>
+    Exit-WithError "Не удалось отправить метаданные в git-репозиторий: $($_.Exception.Message)"
 }
