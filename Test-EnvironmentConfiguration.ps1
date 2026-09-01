@@ -21,6 +21,10 @@
 .PARAMETER SkipGitServiceCheck
     Skip git service API checks (useful for offline validation)
 
+.PARAMETER OutputFile
+    Optional path to also write the success JSON to, isolated from any stdout chatter.
+    Standalone CLI behavior (writing to stdout) is unchanged when omitted.
+
 .EXAMPLE
     ./Test-EnvironmentConfiguration.ps1
 
@@ -33,7 +37,8 @@ param(
     [string]$SourcePath = "",
     [string]$ResultPath = "",
     [string]$MetadataPath = "",
-    [switch]$SkipGitServiceCheck
+    [switch]$SkipGitServiceCheck,
+    [string]$OutputFile = ""
 )
 
 # Import required modules
@@ -273,6 +278,12 @@ $validationOutput = @{
     IsGitProviderAvailable = $canTestApi
 }
 
+$validationJson = $validationOutput | ConvertTo-Json -Depth 10
+
+if (-not [string]::IsNullOrWhiteSpace($OutputFile)) {
+    Set-Content -Path $OutputFile -Value $validationJson -Encoding UTF8
+}
+
 # Output JSON to stdout
-Write-Output ($validationOutput | ConvertTo-Json -Depth 10)
+Write-Output $validationJson
 exit 0

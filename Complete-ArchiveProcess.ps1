@@ -20,35 +20,40 @@ Import-Module (Join-Path $PSScriptRoot "libs/GitServerProvider.psm1") -Force
 
 $pwshPath = Get-CrossPlatformPwsh
 
-# Run the validation script and capture all output
-$validationOutput = & $pwshPath -File "./Test-EnvironmentConfiguration.ps1" 2>&1
+$validationOutputFile = New-TemporaryFile
 
-if ($LASTEXITCODE -ne 0) {
-    Write-Host ""
-    Write-Host "❌ Environment validation failed" -ForegroundColor Red
-    Write-Host ""
-    # Display the captured error output
-    $validationOutput | ForEach-Object { Write-Host $_ -ForegroundColor Red }
-    exit 1
-}
-
-# Parse the JSON output
 try {
-    $validationJson = $validationOutput | Where-Object { $_ -match '^\s*[\{\[]' }
-    $validationResult = $validationJson | ConvertFrom-Json
+    # Run the validation script and capture all output
+    $validationOutput = & $pwshPath -File "./Test-EnvironmentConfiguration.ps1" -OutputFile $validationOutputFile.FullName 2>&1
 
-    # Extract validated paths
-    $validatedSourcePath = $validationResult.Paths.SourcePath
-    $validatedResultPath = $validationResult.Paths.ResultPath
-    $FullMetadataPath = $validationResult.Paths.MetadataPath
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host ""
+        Write-Host "❌ Environment validation failed" -ForegroundColor Red
+        Write-Host ""
+        # Display the captured error output
+        $validationOutput | ForEach-Object { Write-Host $_ -ForegroundColor Red }
+        exit 1
+    }
 
-    Write-Host "✅ Environment validation passed" -ForegroundColor Green
-    Write-Host ""
+    # Parse the JSON output
+    try {
+        $validationResult = Get-Content $validationOutputFile.FullName -Raw | ConvertFrom-Json
 
-} catch {
-    Write-Host ""
-    Write-Host "❌ Failed to parse validation output: $($_.Exception.Message)" -ForegroundColor Red
-    exit 1
+        # Extract validated paths
+        $validatedSourcePath = $validationResult.Paths.SourcePath
+        $validatedResultPath = $validationResult.Paths.ResultPath
+        $FullMetadataPath = $validationResult.Paths.MetadataPath
+
+        Write-Host "✅ Environment validation passed" -ForegroundColor Green
+        Write-Host ""
+
+    } catch {
+        Write-Host ""
+        Write-Host "❌ Failed to parse validation output: $($_.Exception.Message)" -ForegroundColor Red
+        exit 1
+    }
+} finally {
+    Remove-Item $validationOutputFile.FullName -Force -ErrorAction SilentlyContinue
 }
 
 # Reload configuration (in case it was updated by the validation script)
