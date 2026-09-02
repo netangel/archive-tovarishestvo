@@ -124,6 +124,17 @@ if ($pathValidationResults['MetadataPath']) {
     }
 }
 
+# Convert-ScannedFIles.ps1 writes to $ResultPath/metadata, while Complete-ArchiveProcess.ps1
+# commits config.MetadataPath - divergence silently commits an empty directory.
+if ($pathValidationResults['ResultPath'] -and $pathValidationResults['MetadataPath']) {
+    $expectedMetadataPath = [IO.Path]::GetFullPath((Join-Path $pathValidationResults['ResultPath'] 'metadata'))
+    $actualMetadataPath = [IO.Path]::GetFullPath($pathValidationResults['MetadataPath'])
+
+    if ($expectedMetadataPath -ne $actualMetadataPath) {
+        Add-ValidationError "MetadataPath ('$actualMetadataPath') does not match ResultPath/metadata ('$expectedMetadataPath')"
+    }
+}
+
 # Save config if updated
 if ($configUpdated) {
     try {
@@ -173,8 +184,8 @@ if ($pathValidationResults['MetadataPath'] -and $hasGit) {
                 $remoteUrl = $gitResult.Trim()
 
                 # Normalize URLs for comparison
-                $normalizedRemote = $remoteUrl.TrimEnd('/').TrimEnd('.git')
-                $normalizedExpected = $gitRepoUrl.TrimEnd('/').TrimEnd('.git')
+                $normalizedRemote = ConvertTo-NormalizedGitUrl $remoteUrl
+                $normalizedExpected = ConvertTo-NormalizedGitUrl $gitRepoUrl
 
                 if ($normalizedRemote -ne $normalizedExpected) {
                     Add-ValidationError "Git remote origin mismatch. Expected: $gitRepoUrl, Got: $remoteUrl"
@@ -246,9 +257,9 @@ if (-not $SkipGitServiceCheck -and $canTestApi) {
                                          -ProjectId $gitProjectId `
                                          -AccessToken $tokenValue
 
-        # Test by checking for open merge/pull requests
+        # Test actual API connectivity - unlike TestOpenMergeRequests, this must throw on failure
         try {
-            $null = $provider.TestOpenMergeRequests()
+            $provider.TestConnection()
         } catch {
             Add-ValidationError "Failed to query $gitServerType API: $($_.Exception.Message)"
         }

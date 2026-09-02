@@ -90,3 +90,26 @@ Describe 'Push-GitCommit' {
         }
     }
 }
+
+Describe 'ConvertTo-NormalizedGitUrl' {
+    Context 'Equivalent URL pairs normalize to the same value' {
+        $equivalentPairs = @(
+            @{ First = "git@git.dwal.in:solombala-archive/metadata"; Second = "ssh://git@git.dwal.in:22022/solombala-archive/metadata.git" }
+            @{ First = "https://gitlab.com/group/project.git"; Second = "https://gitlab.com/group/project" }
+            @{ First = "https://gitlab.com/group/project/"; Second = "https://gitlab.com/group/project" }
+            @{ First = "https://GitLab.com/group/project"; Second = "https://gitlab.com/group/project" }
+            @{ First = "git@github.com:org/repo.git"; Second = "ssh://git@github.com/org/repo" }
+        )
+
+        It 'Normalizes <First> the same as <Second>' -TestCases $equivalentPairs {
+            param($First, $Second)
+            ConvertTo-NormalizedGitUrl $First | Should -Be (ConvertTo-NormalizedGitUrl $Second)
+        }
+    }
+
+    Context 'Digit regression - character-set trim bug' {
+        It 'Does not truncate a path ending in "digit" down to "d" (TrimEnd is a char-set trim, not a suffix trim)' {
+            ConvertTo-NormalizedGitUrl "https://example.com/repo/digit" | Should -Be "https://example.com/repo/digit"
+        }
+    }
+}

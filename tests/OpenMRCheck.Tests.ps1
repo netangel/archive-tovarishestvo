@@ -206,4 +206,54 @@ Describe 'Test-OpenMergeRequests Function Tests' {
             }
         }
     }
+
+    Context 'TestConnection' {
+        Context 'GitLab provider' {
+            It 'Throws when the API call fails' {
+                # Arrange
+                Mock Invoke-RestMethod -ModuleName GitServerProvider {
+                    throw "API Error: Unauthorized"
+                }
+
+                # Act & Assert - unlike TestOpenMergeRequests, this must throw
+                { $script:gitServiceProvider.TestConnection() } | Should -Throw
+            }
+
+            It 'Does not throw when the API call succeeds' {
+                # Arrange
+                Mock Invoke-RestMethod -ModuleName GitServerProvider { return @() }
+
+                # Act & Assert
+                { $script:gitServiceProvider.TestConnection() } | Should -Not -Throw
+            }
+        }
+
+        Context 'Gitea provider' {
+            BeforeAll {
+                $script:giteaServiceProvider = New-GitServerProvider -ProviderType "Gitea" `
+                    -ServerUrl "https://gitea.example.com" `
+                    -ProjectId "owner/repo" `
+                    -AccessToken "test-token" `
+                    -Verbose:$false
+            }
+
+            It 'Throws when the API call fails' {
+                # Arrange
+                Mock Invoke-RestMethod -ModuleName GitServerProvider {
+                    throw "API Error: Unauthorized"
+                }
+
+                # Act & Assert
+                { $script:giteaServiceProvider.TestConnection() } | Should -Throw
+            }
+
+            It 'Does not throw when the API call succeeds' {
+                # Arrange
+                Mock Invoke-RestMethod -ModuleName GitServerProvider { return @() }
+
+                # Act & Assert
+                { $script:giteaServiceProvider.TestConnection() } | Should -Not -Throw
+            }
+        }
+    }
 }

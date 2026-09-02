@@ -405,6 +405,55 @@ Describe "Integration Tests" {
         }
     }
 
+    Context "Metadata Path Consistency" {
+        It "Should fail when MetadataPath does not match ResultPath/metadata" {
+            # Convert-ScannedFIles.ps1 writes to $ResultPath/metadata; a MetadataPath
+            # pointing elsewhere would silently commit an empty directory.
+            $testRoot = Join-Path $TestDrive "metadata-mismatch"
+            $sourcePath = Join-Path $testRoot "source"
+            $resultPath = Join-Path $testRoot "result"
+            $expectedMetadataPath = Join-Path $resultPath "metadata"
+            $divergentMetadataPath = Join-Path $testRoot "other" "metadata"
+
+            New-Item -Path $sourcePath -ItemType Directory -Force | Out-Null
+            New-Item -Path $resultPath -ItemType Directory -Force | Out-Null
+            New-Item -Path $divergentMetadataPath -ItemType Directory -Force | Out-Null
+
+            $config = @{
+                SourcePath = $sourcePath
+                ResultPath = $resultPath
+                MetadataPath = $divergentMetadataPath
+                GitRepoUrl = "git@example.com:test/repo.git"
+                GitServerType = "GitLab"
+                GitServerUrl = "https://gitlab.example.com"
+                GitProjectId = "12345"
+            }
+
+            $configPath = Join-Path $testRoot "config.json"
+            $config | ConvertTo-Json | Out-File -FilePath $configPath -Encoding UTF8
+
+            $testScriptPath = Join-Path $testRoot "Test-EnvironmentConfiguration.ps1"
+            Copy-Item -Path $scriptPath -Destination $testScriptPath -Force
+
+            $libsSource = Join-Path $PSScriptRoot ".." "libs"
+            $libsDest = Join-Path $testRoot "libs"
+            Copy-Item -Path $libsSource -Destination $libsDest -Recurse -Force
+
+            Push-Location $testRoot
+            try {
+                $output = & pwsh -File $testScriptPath -SkipGitServiceCheck 2>&1
+                $joinedOutput = $output -join "`n"
+
+                $LASTEXITCODE | Should -Be 1
+                $joinedOutput | Should -Match "does not match"
+                $joinedOutput | Should -Match ([regex]::Escape($divergentMetadataPath))
+                $joinedOutput | Should -Match ([regex]::Escape($expectedMetadataPath))
+            } finally {
+                Pop-Location
+            }
+        }
+    }
+
     Context "Parameter Validation" {
         It "Should have SkipGitServiceCheck parameter" {
             $scriptContent = Get-Content $scriptPath -Raw

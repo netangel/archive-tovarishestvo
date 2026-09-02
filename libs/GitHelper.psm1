@@ -106,6 +106,36 @@ function Write-GitLog
     }
 }
 
+# Normalizes a git remote URL for comparison: strips a trailing slash and a trailing
+# `.git` suffix, rewrites scp-style `user@host:path` to `ssh://user@host/path`, drops
+# the port, and lowercases the host. This makes e.g. `git@host:org/repo` compare equal
+# to `ssh://git@host:22/org/repo.git`.
+function ConvertTo-NormalizedGitUrl
+{
+    param([string]$Url)
+
+    if ([string]::IsNullOrWhiteSpace($Url))
+    {
+        return $Url
+    }
+
+    $normalized = $Url.Trim().TrimEnd('/') -replace '\.git$', ''
+
+    if ($normalized -match '^(?<user>[^@/:]+)@(?<host>[^:/]+):(?<path>.+)$')
+    {
+        $normalized = "ssh://$($Matches.user)@$($Matches.host)/$($Matches.path)"
+    }
+
+    $uri = $null
+    if ([System.Uri]::TryCreate($normalized, [System.UriKind]::Absolute, [ref]$uri))
+    {
+        $userInfo = if ($uri.UserInfo) { "$($uri.UserInfo)@" } else { "" }
+        $normalized = "$($uri.Scheme)://$userInfo$($uri.Host.ToLowerInvariant())$($uri.AbsolutePath.TrimEnd('/'))"
+    }
+
+    return $normalized
+}
+
 function Test-GitConnection
 {
     param([string]$UpstreamUrl)
@@ -114,10 +144,8 @@ function Test-GitConnection
         -PostOperation { Write-Host "Репозиторий в папке связан с внешним URL: $UpstreamUrl" } `
         -ValidationLogic {
         param($result)
-        $remoteUrl = $result.StdOut
-        # Normalize URLs for comparison (remove .git suffix and trailing slashes)
-        $normalizedRemote = $remoteUrl.TrimEnd('/').TrimEnd('.git')
-        $normalizedUpstream = $UpstreamUrl.TrimEnd('/').TrimEnd('.git')
+        $normalizedRemote = ConvertTo-NormalizedGitUrl $result.StdOut
+        $normalizedUpstream = ConvertTo-NormalizedGitUrl $UpstreamUrl
 
         return $normalizedRemote -eq $normalizedUpstream
     } | Out-Null
@@ -260,4 +288,4 @@ function New-GitLabMergeRequest
 
 Export-ModuleMember -Function Test-GitConnection, Switch-ToMainBranch, Update-MainBranch, New-ProcessingBranch,
 Add-AllNewFiles, Push-GitCommit, New-GitLabMergeRequest, Test-OpenMergeRequests,
-New-GitServerMergeRequest
+New-GitServerMergeRequest, ConvertTo-NormalizedGitUrl

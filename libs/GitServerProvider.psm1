@@ -15,6 +15,10 @@ class GitServerProvider {
         throw "Method 'TestOpenMergeRequests' must be implemented in derived class"
     }
 
+    [void] TestConnection() {
+        throw "Method 'TestConnection' must be implemented in derived class"
+    }
+
     [object] SubmitMergeRequest([string]$sourceBranch, [string]$targetBranch, [string]$title, [string]$description, [bool]$removeSourceBranch) {
         throw "Method 'SubmitMergeRequest' must be implemented in derived class"
     }
@@ -63,6 +67,17 @@ class GitLabProvider : GitServerProvider {
         }
     }
 
+    [void] TestConnection() {
+        $apiUrl = "$($this.ServerUrl)/api/v4/projects/$($this.ProjectId)/merge_requests?state=opened"
+
+        $headers = @{
+            "PRIVATE-TOKEN" = $this.AccessToken
+            "Content-Type"  = "application/json"
+        }
+
+        Invoke-RestMethod -Uri $apiUrl -Method Get -Headers $headers | Out-Null
+    }
+
     [object] SubmitMergeRequest([string]$sourceBranch, [string]$targetBranch, [string]$title, [string]$description, [bool]$removeSourceBranch) {
         # Construct the API URL
         $apiUrl = "$($this.ServerUrl)/api/v4/projects/$($this.ProjectId)/merge_requests"
@@ -96,15 +111,11 @@ class GitLabProvider : GitServerProvider {
             return $response
         }
         catch {
-            $errorDetails = $_.Exception.Response | ConvertFrom-Json -ErrorAction SilentlyContinue
             Write-Host "❌ Не получилось создать merge запрос:" -ForegroundColor Red
             Write-Host "Status: $($_.Exception.Response.StatusCode)" -ForegroundColor Red
-
-            if ($errorDetails.message) {
-                Write-Host "Error: $($errorDetails.message)" -ForegroundColor Red
-            }
-            else {
-                Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
+            Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
+            if ($_.ErrorDetails.Message) {
+                Write-Host "Details: $($_.ErrorDetails.Message)" -ForegroundColor Red
             }
 
             throw
@@ -154,6 +165,17 @@ class GiteaProvider : GitServerProvider {
             Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
             return $false
         }
+    }
+
+    [void] TestConnection() {
+        $apiUrl = "$($this.ServerUrl)/api/v1/repos/$($this.ProjectId)/pulls?state=open"
+
+        $headers = @{
+            "Authorization" = "token $($this.AccessToken)"
+            "Content-Type"  = "application/json"
+        }
+
+        Invoke-RestMethod -Uri $apiUrl -Method Get -Headers $headers | Out-Null
     }
 
     [object] SubmitMergeRequest([string]$sourceBranch, [string]$targetBranch, [string]$title, [string]$description, [bool]$removeSourceBranch) {
