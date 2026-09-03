@@ -1,3 +1,5 @@
+# Exit codes: 0 = метаданные отправлены, 1 = ошибка, 2 = отправлять нечего (нет изменений).
+# См. $PushResultNoChanges / Push-GitCommit в libs/GitHelper.psm1.
 Param(
     [Parameter(Mandatory=$true)]
     [string]$GitDirectory,
@@ -29,7 +31,7 @@ try {
 
     $pushResult = Push-GitCommit $GitBranch
 
-    if ($pushResult -eq "NoChanges") {
+    if ($pushResult -eq $PushResultNoChanges) {
         exit 2
     }
 

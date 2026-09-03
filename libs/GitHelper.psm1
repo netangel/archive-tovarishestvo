@@ -75,12 +75,17 @@ function Invoke-GitOperation
     $result = Invoke-GitCommand -Arguments $Arguments
     Write-GitLog -Operation $OperationName -Result $result
 
+    if (-not $result.Success)
+    {
+        throw "git $OperationName failed (exit $($result.ExitCode)): $($result.StdErr)"
+    }
+
     # Validate result
     $isValid = & $ValidationLogic $result
 
-    if (-not $result.Success -or -not $isValid)
+    if (-not $isValid)
     {
-        throw "git $OperationName failed (exit $($result.ExitCode)): $($result.StdErr)"
+        throw "git $OperationName вернула неожиданный результат: $($result.StdOut)"
     }
 
     # Execute post-operation logic
@@ -110,6 +115,9 @@ function Write-GitLog
 # `.git` suffix, rewrites scp-style `user@host:path` to `ssh://user@host/path`, drops
 # the port, and lowercases the host. This makes e.g. `git@host:org/repo` compare equal
 # to `ssh://git@host:22/org/repo.git`.
+#
+# Сохраняет креды `user:pass@` как есть, поэтому применять функцию нужно только к
+# обеим сторонам сравнения сразу - никогда к одному URL по отдельности.
 function ConvertTo-NormalizedGitUrl
 {
     param([string]$Url)
@@ -199,15 +207,32 @@ function Add-AllNewFiles
         -PostOperation { Write-Host "Добавляем новые файлы..." } | Out-Null
 }
 
+# Значения, которые возвращает Push-GitCommit; также часть контракта с кодом
+# завершения 2 в Submit-MetadataToRemote.ps1 (см. комментарий в его заголовке).
+$PushResultPushed = "Pushed"
+$PushResultNoChanges = "NoChanges"
+
+<#
+.SYNOPSIS
+    Коммитит и отправляет все изменения, если они есть.
+.OUTPUTS
+    $PushResultPushed, если коммит и push были выполнены; $PushResultNoChanges,
+    если в рабочем дереве не было изменений для коммита.
+#>
 function Push-GitCommit
 {
     param([string]$BranchName)
 
     $statusResult = Invoke-GitCommand -Arguments @("status", "--porcelain")
+    if (-not $statusResult.Success)
+    {
+        throw "git status --porcelain завершился с ошибкой (exit $($statusResult.ExitCode)): $($statusResult.StdErr)"
+    }
+
     if ([string]::IsNullOrWhiteSpace($statusResult.StdOut))
     {
         Write-Host "Нет изменений для отправки"
-        return "NoChanges"
+        return $PushResultNoChanges
     }
 
     Invoke-GitOperation -Arguments @("commit", "-am", "`"Обновление метаданных при автоматической обработке`"") -OperationName "commit -am" `
@@ -217,7 +242,7 @@ function Push-GitCommit
     Invoke-GitOperation -Arguments @("push", "--set-upstream", "origin", $BranchName) -OperationName "push --set-upstream origin $BranchName" `
         -PostOperation { Write-Host "Отправили данные на сервер..." } | Out-Null
 
-    return "Pushed"
+    return $PushResultPushed
 }
 
 # Import the provider module
@@ -289,3 +314,4 @@ function New-GitLabMergeRequest
 Export-ModuleMember -Function Test-GitConnection, Switch-ToMainBranch, Update-MainBranch, New-ProcessingBranch,
 Add-AllNewFiles, Push-GitCommit, New-GitLabMergeRequest, Test-OpenMergeRequests,
 New-GitServerMergeRequest, ConvertTo-NormalizedGitUrl
+Export-ModuleMember -Variable PushResultPushed, PushResultNoChanges

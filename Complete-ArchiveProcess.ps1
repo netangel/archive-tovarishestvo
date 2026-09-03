@@ -37,12 +37,23 @@ try {
 
     # Parse the JSON output
     try {
-        $validationResult = Get-Content $validationOutputFile.FullName -Raw | ConvertFrom-Json
+        $validationRaw = Get-Content $validationOutputFile.FullName -Raw -ErrorAction Stop
+        if ([string]::IsNullOrWhiteSpace($validationRaw)) {
+            throw "скрипт валидации не записал JSON в $($validationOutputFile.FullName)"
+        }
+
+        $validationResult = $validationRaw | ConvertFrom-Json
 
         # Extract validated paths
         $validatedSourcePath = $validationResult.Paths.SourcePath
         $validatedResultPath = $validationResult.Paths.ResultPath
         $FullMetadataPath = $validationResult.Paths.MetadataPath
+
+        foreach ($name in @("SourcePath", "ResultPath", "MetadataPath")) {
+            if ([string]::IsNullOrWhiteSpace($validationResult.Paths.$name)) {
+                throw "в JSON валидации отсутствует $name"
+            }
+        }
 
         Write-Host "✅ Environment validation passed" -ForegroundColor Green
         Write-Host ""
@@ -113,6 +124,7 @@ $gitSubmitProcess = Start-Process -FilePath $pwshPath `
         -ArgumentList "-File", "./Submit-MetadataToRemote.ps1", "-GitDirectory", $FullMetadataPath, "-GitBranch", $branchName `
         -Wait -PassThru -NoNewWindow
 
+# Код завершения 2 означает "публиковать нечего" - см. комментарий в заголовке Submit-MetadataToRemote.ps1.
 if ($gitSubmitProcess.ExitCode -eq 2)
 {
     Write-Host "ℹ️  Нечего публиковать: изменений не обнаружено" -ForegroundColor Yellow

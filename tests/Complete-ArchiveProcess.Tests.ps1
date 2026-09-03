@@ -33,7 +33,7 @@ if ($env:STUB_RECEIPT_DIR) {
 }
 
 if ($exitCode -eq 0) {
-    if ($OutputFile) {
+    if ($OutputFile -and -not $env:STUB_SKIP_OUTPUT_FILE) {
         Set-Content -Path $OutputFile -Value $env:STUB_VALIDATION_JSON -Encoding UTF8
     }
 } else {
@@ -116,7 +116,8 @@ exit $exitCode
             [int]$ValidationExit = 0,
             [int]$SyncExit = 0,
             [int]$ConvertExit = 0,
-            [int]$SubmitExit = 0
+            [int]$SubmitExit = 0,
+            [switch]$SkipValidationOutput
         )
 
         Get-ChildItem -Path $script:receiptDir -File | Remove-Item -Force -ErrorAction SilentlyContinue
@@ -129,6 +130,7 @@ exit $exitCode
             $env:STUB_SYNC_EXIT = "$SyncExit"
             $env:STUB_CONVERT_EXIT = "$ConvertExit"
             $env:STUB_SUBMIT_EXIT = "$SubmitExit"
+            if ($SkipValidationOutput) { $env:STUB_SKIP_OUTPUT_FILE = "true" }
 
             $output = & pwsh -NoProfile -File "./Complete-ArchiveProcess.ps1" 2>&1
 
@@ -138,7 +140,7 @@ exit $exitCode
             }
         } finally {
             Remove-Item Env:\STUB_RECEIPT_DIR, Env:\STUB_VALIDATION_JSON, Env:\STUB_VALIDATION_EXIT, `
-                Env:\STUB_SYNC_EXIT, Env:\STUB_CONVERT_EXIT, Env:\STUB_SUBMIT_EXIT -ErrorAction SilentlyContinue
+                Env:\STUB_SYNC_EXIT, Env:\STUB_CONVERT_EXIT, Env:\STUB_SUBMIT_EXIT, Env:\STUB_SKIP_OUTPUT_FILE -ErrorAction SilentlyContinue
             Pop-Location
         }
     }
@@ -210,12 +212,49 @@ Describe 'Complete-ArchiveProcess orchestration' {
             $result = Invoke-Pipeline -SubmitExit 1
             $result.ExitCode | Should -Be 1
         }
+
+        It 'Aborts when validation exits 0 but writes no JSON' {
+            $result = Invoke-Pipeline -SkipValidationOutput
+            $result.ExitCode | Should -Be 1
+            Get-Receipt "sync" | Should -BeNullOrEmpty
+        }
     }
 
     Context 'Nothing-to-publish handling (Step 2 contract)' {
         It 'Treats submit exit code 2 as success' {
             $result = Invoke-Pipeline -SubmitExit 2
             $result.ExitCode | Should -Be 0
+        }
+
+        It 'Opens no merge request even when a git provider is configured' {
+            # Distinct from the case above: IsGitProviderAvailable = $true here means
+            # $gitProvider is actually constructed, so this proves the exit-2 short
+            # circuit happens before the MR-creation block runs at all - not merely
+            # that $gitProvider was never set.
+            $providerValidationJson = @{
+                Success = $true
+                Paths   = @{
+                    SourcePath   = "STUB_SOURCE_PATH"
+                    ResultPath   = "STUB_RESULT_PATH"
+                    MetadataPath = "STUB_METADATA_PATH"
+                }
+                IsGitProviderAvailable = $true
+            } | ConvertTo-Json -Depth 10 -Compress
+
+            $env:GITEA_TOKEN = "test-token"
+            try {
+                $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+                $result = Invoke-Pipeline -ValidationJson $providerValidationJson -SubmitExit 2
+                $stopwatch.Stop()
+
+                $result.ExitCode | Should -Be 0
+                # config.json points GitServerUrl at https://example.invalid; if the MR
+                # block ran, a real (slow, failing) HTTP call would be attempted.
+                $stopwatch.Elapsed.TotalSeconds | Should -BeLessThan 10
+                ($result.Output -join "`n") | Should -Not -Match "[Mm]erge (запрос|request)"
+            } finally {
+                Remove-Item Env:\GITEA_TOKEN -ErrorAction SilentlyContinue
+            }
         }
     }
 }

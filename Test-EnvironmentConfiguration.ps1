@@ -114,24 +114,23 @@ foreach ($key in $requiredPaths.Keys) {
     }
 }
 
-# Check if MetadataPath ends with 'metadata'
+# Проверяем MetadataPath относительно ResultPath/$MetadataDir (значение приходит из модуля PathHelper),
+# с откатом на упрощённую проверку суффикса, если ResultPath не удалось разрешить.
 if ($pathValidationResults['MetadataPath']) {
-    $metadataPathValue = $pathValidationResults['MetadataPath']
-    $expectedSuffix = $MetadataDir  # This comes from PathHelper module
+    if ($pathValidationResults['ResultPath']) {
+        # Convert-ScannedFIles.ps1 writes to $ResultPath/$MetadataDir, while
+        # Complete-ArchiveProcess.ps1 commits config.MetadataPath - divergence
+        # silently commits an empty directory.
+        $expectedMetadataPath = Get-ComparablePath (Join-Path $pathValidationResults['ResultPath'] $MetadataDir)
+        $actualMetadataPath   = Get-ComparablePath $pathValidationResults['MetadataPath']
 
-    if (-not ($metadataPathValue -match "[\\/]$expectedSuffix$")) {
-        Add-ValidationError "MetadataPath should end with '$expectedSuffix', but it's '$metadataPathValue'"
+        if ($expectedMetadataPath -ne $actualMetadataPath) {
+            Add-ValidationError "MetadataPath ('$actualMetadataPath') does not match ResultPath/$MetadataDir ('$expectedMetadataPath')"
+        }
     }
-}
-
-# Convert-ScannedFIles.ps1 writes to $ResultPath/metadata, while Complete-ArchiveProcess.ps1
-# commits config.MetadataPath - divergence silently commits an empty directory.
-if ($pathValidationResults['ResultPath'] -and $pathValidationResults['MetadataPath']) {
-    $expectedMetadataPath = [IO.Path]::GetFullPath((Join-Path $pathValidationResults['ResultPath'] 'metadata'))
-    $actualMetadataPath = [IO.Path]::GetFullPath($pathValidationResults['MetadataPath'])
-
-    if ($expectedMetadataPath -ne $actualMetadataPath) {
-        Add-ValidationError "MetadataPath ('$actualMetadataPath') does not match ResultPath/metadata ('$expectedMetadataPath')"
+    elseif (-not ($pathValidationResults['MetadataPath'] -match "[\\/]$MetadataDir$")) {
+        # ResultPath не удалось разрешить, поэтому используем более слабую проверку суффикса.
+        Add-ValidationError "MetadataPath should end with '$MetadataDir', but it's '$($pathValidationResults['MetadataPath'])'"
     }
 }
 
@@ -292,7 +291,12 @@ $validationOutput = @{
 $validationJson = $validationOutput | ConvertTo-Json -Depth 10
 
 if (-not [string]::IsNullOrWhiteSpace($OutputFile)) {
-    Set-Content -Path $OutputFile -Value $validationJson -Encoding UTF8
+    try {
+        Set-Content -Path $OutputFile -Value $validationJson -Encoding UTF8 -ErrorAction Stop
+    } catch {
+        Write-Error "Не удалось записать результат валидации в '$OutputFile': $($_.Exception.Message)"
+        exit 1
+    }
 }
 
 # Output JSON to stdout

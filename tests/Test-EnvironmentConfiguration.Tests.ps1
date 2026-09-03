@@ -291,6 +291,12 @@ Describe "Integration Tests" {
             # Check if git is available
             $script:hasGit = $null -ne (Get-Command git -ErrorAction SilentlyContinue)
 
+            # -SkipGitServiceCheck (used below) only skips the API connectivity check
+            # (Section 7); the token-presence check (Section 6) still runs regardless,
+            # so GITLAB_TOKEN must be set for this GitServerType: "GitLab" fixture.
+            $script:previousGitlabToken = $env:GITLAB_TOKEN
+            $env:GITLAB_TOKEN = "test-token"
+
             # Create a test environment in TestDrive
             $testRoot = Join-Path $TestDrive "valid-env"
             New-Item -Path $testRoot -ItemType Directory -Force | Out-Null
@@ -326,6 +332,10 @@ Describe "Integration Tests" {
             $config | ConvertTo-Json | Out-File -FilePath $configPath -Encoding UTF8
         }
 
+        AfterAll {
+            $env:GITLAB_TOKEN = $script:previousGitlabToken
+        }
+
         It "Should output valid JSON on success with SkipGitServiceCheck" -Skip:(-not $script:hasGit) {
             $testRoot = Join-Path $TestDrive "valid-env"
             $configPath = Join-Path $testRoot "config.json"
@@ -358,6 +368,52 @@ Describe "Integration Tests" {
                 $result.Paths.ResultPath | Should -Not -BeNullOrEmpty
                 $result.Paths.MetadataPath | Should -Not -BeNullOrEmpty
                 $result.PSObject.Properties.Name | Should -Contain "IsGitProviderAvailable"
+            } finally {
+                Pop-Location
+            }
+        }
+
+        # -Skip calls Get-Command directly, rather than reading $script:hasGit, because It's
+        # -Skip is evaluated during Pester's discovery pass, before BeforeAll (a run-phase
+        # hook) ever sets $script:hasGit.
+        It "Should pass when MetadataPath has a trailing directory separator" -Skip:(-not (Get-Command git -ErrorAction SilentlyContinue)) {
+            $testRoot = Join-Path $TestDrive "metadata-trailing-sep"
+            $sourcePath = Join-Path $testRoot "source"
+            $resultPath = Join-Path $testRoot "result"
+            $metadataPath = Join-Path $resultPath "metadata"
+
+            New-Item -Path $sourcePath -ItemType Directory -Force | Out-Null
+            New-Item -Path $resultPath -ItemType Directory -Force | Out-Null
+            New-Item -Path $metadataPath -ItemType Directory -Force | Out-Null
+
+            Push-Location $metadataPath
+            git init 2>&1 | Out-Null
+            git remote add origin "git@example.com:test/repo.git" 2>&1 | Out-Null
+            Pop-Location
+
+            $config = @{
+                SourcePath = $sourcePath
+                ResultPath = $resultPath
+                MetadataPath = "$metadataPath$([IO.Path]::DirectorySeparatorChar)"
+                GitRepoUrl = "git@example.com:test/repo.git"
+                GitServerType = "GitLab"
+                GitServerUrl = "https://gitlab.example.com"
+                GitProjectId = "12345"
+            }
+            $configPath = Join-Path $testRoot "config.json"
+            $config | ConvertTo-Json | Out-File -FilePath $configPath -Encoding UTF8
+
+            $testScriptPath = Join-Path $testRoot "Test-EnvironmentConfiguration.ps1"
+            Copy-Item -Path $scriptPath -Destination $testScriptPath -Force
+
+            $libsSource = Join-Path $PSScriptRoot ".." "libs"
+            $libsDest = Join-Path $testRoot "libs"
+            Copy-Item -Path $libsSource -Destination $libsDest -Recurse -Force
+
+            Push-Location $testRoot
+            try {
+                $output = & pwsh -File $testScriptPath -SkipGitServiceCheck 2>&1
+                $LASTEXITCODE | Should -Be 0 -Because ($output -join "`n")
             } finally {
                 Pop-Location
             }
