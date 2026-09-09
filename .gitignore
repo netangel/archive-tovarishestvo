@@ -48,3 +48,7 @@ Thumbs.db
 *.mov
 *.wmv
 
+# Tooling secrets and generated reports
+tools/.env
+tools/sync-report-*.json
+
