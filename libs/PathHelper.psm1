@@ -190,7 +190,16 @@ function Test-RequiredPathsAndReturn {
     return $FullSourcePath
 }
 
+# Приводит путь к полной форме и убирает завершающий разделитель, чтобы два пути,
+# различающихся только завершающим слэшем/бэкслэшем, сравнивались как равные.
+function Get-ComparablePath {
+    param([string]$Path)
+
+    return [IO.Path]::GetFullPath($Path).
+        TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
+}
+
 Export-ModuleMember -Function Get-DirectoryOrCreate, Get-TagsFromName, Get-YearFromFilename,
-                                Get-ThumbnailFileName, Get-ThumbnailDir, Test-RequiredPathsAndReturn, Get-IsWindowsPlatform, Test-IsFullPath
+                                Get-ThumbnailFileName, Get-ThumbnailDir, Test-RequiredPathsAndReturn, Get-IsWindowsPlatform, Test-IsFullPath, Get-ComparablePath
 
 Export-ModuleMember -Variable MetadataDir

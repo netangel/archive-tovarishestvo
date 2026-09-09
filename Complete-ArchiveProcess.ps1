@@ -20,35 +20,51 @@ Import-Module (Join-Path $PSScriptRoot "libs/GitServerProvider.psm1") -Force
 
 $pwshPath = Get-CrossPlatformPwsh
 
-# Run the validation script and capture all output
-$validationOutput = & $pwshPath -File "./Test-EnvironmentConfiguration.ps1" 2>&1
+$validationOutputFile = New-TemporaryFile
 
-if ($LASTEXITCODE -ne 0) {
-    Write-Host ""
-    Write-Host "❌ Environment validation failed" -ForegroundColor Red
-    Write-Host ""
-    # Display the captured error output
-    $validationOutput | ForEach-Object { Write-Host $_ -ForegroundColor Red }
-    exit 1
-}
-
-# Parse the JSON output
 try {
-    $validationJson = $validationOutput | Where-Object { $_ -match '^\s*[\{\[]' }
-    $validationResult = $validationJson | ConvertFrom-Json
+    # Run the validation script and capture all output
+    $validationOutput = & $pwshPath -File "./Test-EnvironmentConfiguration.ps1" -OutputFile $validationOutputFile.FullName 2>&1
 
-    # Extract validated paths
-    $validatedSourcePath = $validationResult.Paths.SourcePath
-    $validatedResultPath = $validationResult.Paths.ResultPath
-    $FullMetadataPath = $validationResult.Paths.MetadataPath
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host ""
+        Write-Host "❌ Environment validation failed" -ForegroundColor Red
+        Write-Host ""
+        # Display the captured error output
+        $validationOutput | ForEach-Object { Write-Host $_ -ForegroundColor Red }
+        exit 1
+    }
 
-    Write-Host "✅ Environment validation passed" -ForegroundColor Green
-    Write-Host ""
+    # Parse the JSON output
+    try {
+        $validationRaw = Get-Content $validationOutputFile.FullName -Raw -ErrorAction Stop
+        if ([string]::IsNullOrWhiteSpace($validationRaw)) {
+            throw "скрипт валидации не записал JSON в $($validationOutputFile.FullName)"
+        }
 
-} catch {
-    Write-Host ""
-    Write-Host "❌ Failed to parse validation output: $($_.Exception.Message)" -ForegroundColor Red
-    exit 1
+        $validationResult = $validationRaw | ConvertFrom-Json
+
+        # Extract validated paths
+        $validatedSourcePath = $validationResult.Paths.SourcePath
+        $validatedResultPath = $validationResult.Paths.ResultPath
+        $FullMetadataPath = $validationResult.Paths.MetadataPath
+
+        foreach ($name in @("SourcePath", "ResultPath", "MetadataPath")) {
+            if ([string]::IsNullOrWhiteSpace($validationResult.Paths.$name)) {
+                throw "в JSON валидации отсутствует $name"
+            }
+        }
+
+        Write-Host "✅ Environment validation passed" -ForegroundColor Green
+        Write-Host ""
+
+    } catch {
+        Write-Host ""
+        Write-Host "❌ Failed to parse validation output: $($_.Exception.Message)" -ForegroundColor Red
+        exit 1
+    }
+} finally {
+    Remove-Item $validationOutputFile.FullName -Force -ErrorAction SilentlyContinue
 }
 
 # Reload configuration (in case it was updated by the validation script)
@@ -107,6 +123,13 @@ if ($convertScansProcess.ExitCode -ne 0) {
 $gitSubmitProcess = Start-Process -FilePath $pwshPath `
         -ArgumentList "-File", "./Submit-MetadataToRemote.ps1", "-GitDirectory", $FullMetadataPath, "-GitBranch", $branchName `
         -Wait -PassThru -NoNewWindow
+
+# Код завершения 2 означает "публиковать нечего" - см. комментарий в заголовке Submit-MetadataToRemote.ps1.
+if ($gitSubmitProcess.ExitCode -eq 2)
+{
+    Write-Host "ℹ️  Нечего публиковать: изменений не обнаружено" -ForegroundColor Yellow
+    exit 0
+}
 
 if ($gitSubmitProcess.ExitCode -ne 0)
 {

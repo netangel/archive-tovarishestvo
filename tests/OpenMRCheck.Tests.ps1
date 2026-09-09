@@ -206,4 +206,99 @@ Describe 'Test-OpenMergeRequests Function Tests' {
             }
         }
     }
+
+    Context 'TestConnection' {
+        Context 'GitLab provider' {
+            It 'Throws when the API call fails' {
+                # Arrange
+                Mock Invoke-RestMethod -ModuleName GitServerProvider {
+                    throw "API Error: Unauthorized"
+                }
+
+                # Act & Assert - unlike TestOpenMergeRequests, this must throw
+                { $script:gitServiceProvider.TestConnection() } | Should -Throw
+            }
+
+            It 'Does not throw when the API call succeeds' {
+                # Arrange
+                Mock Invoke-RestMethod -ModuleName GitServerProvider { return @() }
+
+                # Act & Assert
+                { $script:gitServiceProvider.TestConnection() } | Should -Not -Throw
+            }
+
+            It 'Calls the open merge requests endpoint with the auth header' {
+                # Pins the same endpoint/header TestOpenMergeRequests uses, so the two
+                # cannot silently drift apart.
+                Mock Invoke-RestMethod -ModuleName GitServerProvider { return @() }
+
+                $script:gitServiceProvider.TestConnection()
+
+                Should -Invoke Invoke-RestMethod -ModuleName GitServerProvider -Exactly 1 -ParameterFilter {
+                    $Uri -eq "https://gitlab.com/api/v4/projects/12345/merge_requests?state=opened" -and
+                    $Headers["PRIVATE-TOKEN"] -eq "test-token"
+                }
+            }
+        }
+
+        Context 'Gitea provider' {
+            BeforeAll {
+                $script:giteaServiceProvider = New-GitServerProvider -ProviderType "Gitea" `
+                    -ServerUrl "https://gitea.example.com" `
+                    -ProjectId "owner/repo" `
+                    -AccessToken "test-token" `
+                    -Verbose:$false
+            }
+
+            It 'Throws when the API call fails' {
+                # Arrange
+                Mock Invoke-RestMethod -ModuleName GitServerProvider {
+                    throw "API Error: Unauthorized"
+                }
+
+                # Act & Assert
+                { $script:giteaServiceProvider.TestConnection() } | Should -Throw
+            }
+
+            It 'Does not throw when the API call succeeds' {
+                # Arrange
+                Mock Invoke-RestMethod -ModuleName GitServerProvider { return @() }
+
+                # Act & Assert
+                { $script:giteaServiceProvider.TestConnection() } | Should -Not -Throw
+            }
+
+            It 'Calls the open pull requests endpoint with the auth header' {
+                Mock Invoke-RestMethod -ModuleName GitServerProvider { return @() }
+
+                $script:giteaServiceProvider.TestConnection()
+
+                Should -Invoke Invoke-RestMethod -ModuleName GitServerProvider -Exactly 1 -ParameterFilter {
+                    $Uri -eq "https://gitea.example.com/api/v1/repos/owner/repo/pulls?state=open" -and
+                    $Headers["Authorization"] -eq "token test-token"
+                }
+            }
+        }
+    }
+
+    Context 'SubmitMergeRequest error reporting' {
+        It 'Displays the response body from ErrorDetails.Message when the GitLab API call fails' {
+            # Arrange - throwing the ErrorRecord itself (rather than a plain string)
+            # preserves ErrorDetails through to the catch block's $_.
+            Mock Invoke-RestMethod -ModuleName GitServerProvider {
+                $exception = [System.Exception]::new("Bad Request")
+                $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+                    $exception, "TestError", [System.Management.Automation.ErrorCategory]::InvalidOperation, $null)
+                $errorRecord.ErrorDetails = [System.Management.Automation.ErrorDetails]::new('{"message":"branch already exists"}')
+                throw $errorRecord
+            }
+
+            # Act & Assert
+            { $script:gitServiceProvider.SubmitMergeRequest("feature", "main", "Title", "Desc", $true) } | Should -Throw
+
+            Should -Invoke Write-Host -ModuleName GitServerProvider -ParameterFilter {
+                $Object -match "Details:.*branch already exists"
+            }
+        }
+    }
 }

@@ -21,6 +21,10 @@
 .PARAMETER SkipGitServiceCheck
     Skip git service API checks (useful for offline validation)
 
+.PARAMETER OutputFile
+    Optional path to also write the success JSON to, isolated from any stdout chatter.
+    Standalone CLI behavior (writing to stdout) is unchanged when omitted.
+
 .EXAMPLE
     ./Test-EnvironmentConfiguration.ps1
 
@@ -33,7 +37,8 @@ param(
     [string]$SourcePath = "",
     [string]$ResultPath = "",
     [string]$MetadataPath = "",
-    [switch]$SkipGitServiceCheck
+    [switch]$SkipGitServiceCheck,
+    [string]$OutputFile = ""
 )
 
 # Import required modules
@@ -109,13 +114,23 @@ foreach ($key in $requiredPaths.Keys) {
     }
 }
 
-# Check if MetadataPath ends with 'metadata'
+# Проверяем MetadataPath относительно ResultPath/$MetadataDir (значение приходит из модуля PathHelper),
+# с откатом на упрощённую проверку суффикса, если ResultPath не удалось разрешить.
 if ($pathValidationResults['MetadataPath']) {
-    $metadataPathValue = $pathValidationResults['MetadataPath']
-    $expectedSuffix = $MetadataDir  # This comes from PathHelper module
+    if ($pathValidationResults['ResultPath']) {
+        # Convert-ScannedFIles.ps1 writes to $ResultPath/$MetadataDir, while
+        # Complete-ArchiveProcess.ps1 commits config.MetadataPath - divergence
+        # silently commits an empty directory.
+        $expectedMetadataPath = Get-ComparablePath (Join-Path $pathValidationResults['ResultPath'] $MetadataDir)
+        $actualMetadataPath   = Get-ComparablePath $pathValidationResults['MetadataPath']
 
-    if (-not ($metadataPathValue -match "[\\/]$expectedSuffix$")) {
-        Add-ValidationError "MetadataPath should end with '$expectedSuffix', but it's '$metadataPathValue'"
+        if ($expectedMetadataPath -ne $actualMetadataPath) {
+            Add-ValidationError "MetadataPath ('$actualMetadataPath') does not match ResultPath/$MetadataDir ('$expectedMetadataPath')"
+        }
+    }
+    elseif (-not ($pathValidationResults['MetadataPath'] -match "[\\/]$MetadataDir$")) {
+        # ResultPath не удалось разрешить, поэтому используем более слабую проверку суффикса.
+        Add-ValidationError "MetadataPath should end with '$MetadataDir', but it's '$($pathValidationResults['MetadataPath'])'"
     }
 }
 
@@ -168,8 +183,8 @@ if ($pathValidationResults['MetadataPath'] -and $hasGit) {
                 $remoteUrl = $gitResult.Trim()
 
                 # Normalize URLs for comparison
-                $normalizedRemote = $remoteUrl.TrimEnd('/').TrimEnd('.git')
-                $normalizedExpected = $gitRepoUrl.TrimEnd('/').TrimEnd('.git')
+                $normalizedRemote = ConvertTo-NormalizedGitUrl $remoteUrl
+                $normalizedExpected = ConvertTo-NormalizedGitUrl $gitRepoUrl
 
                 if ($normalizedRemote -ne $normalizedExpected) {
                     Add-ValidationError "Git remote origin mismatch. Expected: $gitRepoUrl, Got: $remoteUrl"
@@ -241,9 +256,9 @@ if (-not $SkipGitServiceCheck -and $canTestApi) {
                                          -ProjectId $gitProjectId `
                                          -AccessToken $tokenValue
 
-        # Test by checking for open merge/pull requests
+        # Test actual API connectivity - unlike TestOpenMergeRequests, this must throw on failure
         try {
-            $null = $provider.TestOpenMergeRequests()
+            $provider.TestConnection()
         } catch {
             Add-ValidationError "Failed to query $gitServerType API: $($_.Exception.Message)"
         }
@@ -273,6 +288,17 @@ $validationOutput = @{
     IsGitProviderAvailable = $canTestApi
 }
 
+$validationJson = $validationOutput | ConvertTo-Json -Depth 10
+
+if (-not [string]::IsNullOrWhiteSpace($OutputFile)) {
+    try {
+        Set-Content -Path $OutputFile -Value $validationJson -Encoding UTF8 -ErrorAction Stop
+    } catch {
+        Write-Error "Не удалось записать результат валидации в '$OutputFile': $($_.Exception.Message)"
+        exit 1
+    }
+}
+
 # Output JSON to stdout
-Write-Output ($validationOutput | ConvertTo-Json -Depth 10)
+Write-Output $validationJson
 exit 0

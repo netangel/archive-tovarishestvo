@@ -11,8 +11,22 @@ class GitServerProvider {
     }
 
     # Abstract methods that must be implemented by derived classes
+    [hashtable] GetAuthHeaders() {
+        throw "Метод 'GetAuthHeaders' должен быть переопределён в классе-наследнике"
+    }
+
+    [string] GetOpenMergeRequestsUrl() {
+        throw "Метод 'GetOpenMergeRequestsUrl' должен быть переопределён в классе-наследнике"
+    }
+
     [object] TestOpenMergeRequests() {
         throw "Method 'TestOpenMergeRequests' must be implemented in derived class"
+    }
+
+    # В отличие от TestOpenMergeRequests, здесь нужно выбрасывать исключение при ошибке -
+    # используется тот же эндпоинт, но только для проверки доступности API и прав токена.
+    [void] TestConnection() {
+        Invoke-RestMethod -Uri $this.GetOpenMergeRequestsUrl() -Method Get -Headers $this.GetAuthHeaders() | Out-Null
     }
 
     [object] SubmitMergeRequest([string]$sourceBranch, [string]$targetBranch, [string]$title, [string]$description, [bool]$removeSourceBranch) {
@@ -24,21 +38,23 @@ class GitServerProvider {
 class GitLabProvider : GitServerProvider {
     GitLabProvider([string]$serverUrl, [string]$projectId, [string]$accessToken) : base($serverUrl, $projectId, $accessToken) {}
 
-    [object] TestOpenMergeRequests() {
-        # Construct the API URL for listing open merge requests
-        $apiUrl = "$($this.ServerUrl)/api/v4/projects/$($this.ProjectId)/merge_requests?state=opened"
-
-        # Prepare headers
-        $headers = @{
+    [hashtable] GetAuthHeaders() {
+        return @{
             "PRIVATE-TOKEN" = $this.AccessToken
             "Content-Type"  = "application/json"
         }
+    }
 
+    [string] GetOpenMergeRequestsUrl() {
+        return "$($this.ServerUrl)/api/v4/projects/$($this.ProjectId)/merge_requests?state=opened"
+    }
+
+    [object] TestOpenMergeRequests() {
         try {
             Write-Host "Проверяем наличие открытых merge запросов (GitLab)..." -ForegroundColor Yellow
 
             # Make the API call
-            $response = Invoke-RestMethod -Uri $apiUrl -Method Get -Headers $headers
+            $response = Invoke-RestMethod -Uri $this.GetOpenMergeRequestsUrl() -Method Get -Headers $this.GetAuthHeaders()
 
             if ($response.Count -gt 0) {
                 Write-Host "⚠️  Обнаружено открытых merge запросов: $($response.Count)" -ForegroundColor Red
@@ -67,12 +83,6 @@ class GitLabProvider : GitServerProvider {
         # Construct the API URL
         $apiUrl = "$($this.ServerUrl)/api/v4/projects/$($this.ProjectId)/merge_requests"
 
-        # Prepare headers
-        $headers = @{
-            "PRIVATE-TOKEN" = $this.AccessToken
-            "Content-Type"  = "application/json"
-        }
-
         # Prepare the request body
         $body = @{
             source_branch        = $sourceBranch
@@ -87,7 +97,7 @@ class GitLabProvider : GitServerProvider {
             Write-Host "Исходная ветка: $sourceBranch -> Целевая ветка: $targetBranch" -ForegroundColor Cyan
 
             # Make the API call
-            $response = Invoke-RestMethod -Uri $apiUrl -Method Post -Headers $headers -Body $body
+            $response = Invoke-RestMethod -Uri $apiUrl -Method Post -Headers $this.GetAuthHeaders() -Body $body
 
             Write-Host "✅ Merge запрос создан успешно!" -ForegroundColor Green
             Write-Host "MR ID: $($response.iid)" -ForegroundColor White
@@ -96,15 +106,11 @@ class GitLabProvider : GitServerProvider {
             return $response
         }
         catch {
-            $errorDetails = $_.Exception.Response | ConvertFrom-Json -ErrorAction SilentlyContinue
             Write-Host "❌ Не получилось создать merge запрос:" -ForegroundColor Red
             Write-Host "Status: $($_.Exception.Response.StatusCode)" -ForegroundColor Red
-
-            if ($errorDetails.message) {
-                Write-Host "Error: $($errorDetails.message)" -ForegroundColor Red
-            }
-            else {
-                Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
+            Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
+            if ($_.ErrorDetails.Message) {
+                Write-Host "Details: $($_.ErrorDetails.Message)" -ForegroundColor Red
             }
 
             throw
@@ -116,22 +122,25 @@ class GitLabProvider : GitServerProvider {
 class GiteaProvider : GitServerProvider {
     GiteaProvider([string]$serverUrl, [string]$projectId, [string]$accessToken) : base($serverUrl, $projectId, $accessToken) {}
 
-    [object] TestOpenMergeRequests() {
-        # Gitea uses "pull requests" terminology, API: /repos/{owner}/{repo}/pulls
-        # ProjectId should be in format "owner/repo"
-        $apiUrl = "$($this.ServerUrl)/api/v1/repos/$($this.ProjectId)/pulls?state=open"
-
-        # Prepare headers (Gitea uses different auth header)
-        $headers = @{
+    [hashtable] GetAuthHeaders() {
+        return @{
             "Authorization" = "token $($this.AccessToken)"
             "Content-Type"  = "application/json"
         }
+    }
 
+    [string] GetOpenMergeRequestsUrl() {
+        # Gitea uses "pull requests" terminology, API: /repos/{owner}/{repo}/pulls
+        # ProjectId should be in format "owner/repo"
+        return "$($this.ServerUrl)/api/v1/repos/$($this.ProjectId)/pulls?state=open"
+    }
+
+    [object] TestOpenMergeRequests() {
         try {
             Write-Host "Проверяем наличие открытых pull запросов (Gitea)..." -ForegroundColor Yellow
 
             # Make the API call
-            $response = Invoke-RestMethod -Uri $apiUrl -Method Get -Headers $headers
+            $response = Invoke-RestMethod -Uri $this.GetOpenMergeRequestsUrl() -Method Get -Headers $this.GetAuthHeaders()
 
             if ($response.Count -gt 0) {
                 Write-Host "⚠️  Обнаружено открытых pull запросов: $($response.Count)" -ForegroundColor Red
@@ -160,12 +169,6 @@ class GiteaProvider : GitServerProvider {
         # Gitea API: /repos/{owner}/{repo}/pulls
         $apiUrl = "$($this.ServerUrl)/api/v1/repos/$($this.ProjectId)/pulls"
 
-        # Prepare headers
-        $headers = @{
-            "Authorization" = "token $($this.AccessToken)"
-            "Content-Type"  = "application/json"
-        }
-
         # Prepare the request body (Gitea uses different field names)
         $body = @{
             head  = $sourceBranch
@@ -179,7 +182,7 @@ class GiteaProvider : GitServerProvider {
             Write-Host "Исходная ветка: $sourceBranch -> Целевая ветка: $targetBranch" -ForegroundColor Cyan
 
             # Make the API call
-            $response = Invoke-RestMethod -Uri $apiUrl -Method Post -Headers $headers -Body $body
+            $response = Invoke-RestMethod -Uri $apiUrl -Method Post -Headers $this.GetAuthHeaders() -Body $body
 
             Write-Host "✅ Pull запрос создан успешно!" -ForegroundColor Green
             Write-Host "PR Number: $($response.number)" -ForegroundColor White
