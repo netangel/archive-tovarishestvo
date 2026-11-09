@@ -48,6 +48,67 @@ Describe "Convert-ToZola Tests" {
         }
     }
 
+    Describe "ConvertTo-DrawingTitle" {
+        It "Formats '<Name>' as '<Title>'" -ForEach @(
+            @{ Name = "001_БотДляМурмана_ОбщееРасположение_1945.tif"; Title = "Бот Для Мурмана – Общее расположение" }
+            @{ Name = "1185_Дори_Длина8,8м_ПодъемноеУстройство_Детали_1950.pdf"; Title = "Дори – Длина 8,8 м – Подъемное устройство – Детали" }
+            @{ Name = "132_п_ИзотермическийПлашкоут_45т_РулевоеУстройство_1956.tif"; Title = "Изотермический Плашкоут – 45 т – Рулевое устройство" }
+            @{ Name = "ШР_100_ШлюпкаРабочая_4,0метра_РеёкДляЧехла_1965.pdf"; Title = "Шлюпка Рабочая – 4,0 метра – Реёк для чехла" }
+            @{ Name = "02_4976-6_Сетеотводитель_ОбщийВид_1960.tif"; Title = "Сетеотводитель – Общий вид" }
+            @{ Name = "51998_МоторноПарусныйБотВасильева_ФильтрДляТоплива_1944.tif"; Title = "Моторно-парусный Бот Васильева – Фильтр для топлива" }
+            @{ Name = "238_КатерСудоверфь№1_МасштабБонжана_1943.tif"; Title = "Катер Судоверфь №1 – Масштаб Бонжана" }
+            @{ Name = "2311_ПереоборудованиеЛебедкиВГрузовую_РедукторЧервячный_1953.tif"; Title = "Переоборудование Лебедки В Грузовую – Редуктор червячный" }
+            @{ Name = "854_Бот_Двигатель3-Д-6_ТрубопроводМасляный_1948.tif"; Title = "Бот – Двигатель 3-Д-6 – Трубопровод масляный" }
+            @{ Name = "1404_Шхуна_КормоваяСтенка_1951_1951.tif"; Title = "Шхуна – Кормовая стенка" }
+            @{ Name = "2145_Шхуна_ПредохранительныйКлапан_1953.tif.tif"; Title = "Шхуна – Предохранительный клапан" }
+            @{ Name = "551_Шлюпка_Руль_1946(лист2).tif"; Title = "Шлюпка – Руль – Лист 2" }
+            @{ Name = "(дубль)708а_Бот_ГребнаяАрматура.tif"; Title = "Бот – Гребная арматура" }
+            @{ Name = "99_СудаГидробазы_ЦинковаяЗащита_1963 (2).tif"; Title = "Суда Гидробазы – Цинковая защита" }
+            @{ Name = "ОписьЧертежейПоМотовельботу.tif"; Title = "Опись Чертежей По Мотовельботу" }
+            @{ Name = "955.tif"; Title = "955" }
+        ) {
+            ConvertTo-DrawingTitle $Name | Should -BeExactly $Title
+        }
+    }
+
+    Describe "Get-DrawingNumber" {
+        It "Reads '<Number>' from '<Name>'" -ForEach @(
+            @{ Name = "001_БотДляМурмана_1945.tif"; Number = "001" }
+            @{ Name = "001а_Бот_ДляМурмана_1943.tif"; Number = "001а" }
+            @{ Name = "132_п_Плашкоут_1956.tif"; Number = "132-п" }
+            @{ Name = "1399_1_Шхуна_1951.tif"; Number = "1399-1" }
+            @{ Name = "ШР_51_Шлюпка_1963.tif"; Number = "ШР-51" }
+            @{ Name = "ВН05-92-1_Ушко_1941.tif"; Number = "ВН05-92-1" }
+            @{ Name = "02_4976-6_Шхуна_1950.tif"; Number = "02-4976-6" }
+            @{ Name = "ОписьЧертежей.tif"; Number = "" }
+        ) {
+            Get-DrawingNumber $Name | Should -BeExactly $Number
+        }
+    }
+
+    Describe "Format-JsonFileIntoContent ordering" {
+        It "Numbers pages in sheet order, not alphabetically by title" {
+            $metadataFile = Join-Path $testMetadataPath "order.json"
+            @{
+                Directory    = "order"
+                OriginalName = "Порядок"
+                # Listed in the wrong order on purpose: real metadata is in text order (10 before 2)
+                Files        = [ordered]@{
+                    "ten"   = @{ OriginalName = "10_Анкер_1950.tif"; Tags = @(); Thumbnails = @{} }
+                    "twoA"  = @{ OriginalName = "2а_Болт_1950.tif"; Tags = @(); Thumbnails = @{} }
+                    "two"   = @{ OriginalName = "2_Якорь_1950.tif"; Tags = @(); Thumbnails = @{} }
+                }
+            } | ConvertTo-Json -Depth 5 | Out-File $metadataFile -Encoding utf8
+
+            Format-JsonFileIntoContent -JsonPath $metadataFile -OutputPath $testZolaPath
+
+            Get-Content (Join-Path $testZolaPath "order/two.md") -Raw | Should -Match 'weight = 1\b'
+            Get-Content (Join-Path $testZolaPath "order/twoA.md") -Raw | Should -Match 'weight = 2\b'
+            Get-Content (Join-Path $testZolaPath "order/ten.md") -Raw | Should -Match 'weight = 3\b'
+            Get-Content (Join-Path $testZolaPath "order/_index.md") -Raw | Should -Match 'sort_by = "weight"'
+        }
+    }
+
     Describe "Parameter Validation" {
         It "Throws when metadata path doesn't exist" {
             # Act & Assert
@@ -199,6 +260,39 @@ Describe "Convert-ToZola Tests" {
             $content | Should -Match 'title = "test"'
             $content | Should -Match 'file_id = "test-123"'
             $content | Should -Match 'directory_name = "test-dir"'
+        }
+
+        It "Writes the clean title and sheet number, keeping the year separately" {
+            $fileData = [PSCustomObject]@{
+                OriginalName = "001_БотДляМурмана_ОбщееРасположение_1945.tif"
+                Tags         = @()
+                Year         = "1945"
+                Thumbnails   = @()
+            }
+
+            New-ContentPage -Directory "drawing" -FileId "drawing-1" -FileData $fileData -OutputPath $testOutputPath -Weight 7
+
+            $content = Get-Content (Join-Path $testOutputPath "drawing/drawing-1.md") -Raw -Encoding utf8
+            $content | Should -Match 'title = "Бот Для Мурмана – Общее расположение"'
+            $content | Should -Match 'sheet_no = "001"'
+            $content | Should -Match 'scan_year = "1945"'
+            $content | Should -Match 'weight = 7\b'
+            # Zola needs weight before [extra], otherwise it is not a page field
+            $content.IndexOf('weight =') | Should -BeLessThan $content.IndexOf('[extra]')
+        }
+
+        It "Omits sheet_no and weight when there is none" {
+            $fileData = [PSCustomObject]@{
+                OriginalName = "ОписьЧертежей.tif"
+                Tags         = @()
+                Thumbnails   = @()
+            }
+
+            New-ContentPage -Directory "plain" -FileId "plain-1" -FileData $fileData -OutputPath $testOutputPath
+
+            $content = Get-Content (Join-Path $testOutputPath "plain/plain-1.md") -Raw -Encoding utf8
+            $content | Should -Not -Match 'sheet_no ='
+            $content | Should -Not -Match 'weight ='
         }
 
         It "Includes all optional metadata when provided" {
