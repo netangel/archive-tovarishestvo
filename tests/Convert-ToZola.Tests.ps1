@@ -453,5 +453,71 @@ Describe "Convert-ToZola Tests" {
             $content | Should -Not -Match '\[taxonomies\]'
             $content | Should -Not -Match 'tags ='
         }
+
+        It "Writes the main category as the razdely taxonomy next to tags" {
+            $fileData = [PSCustomObject]@{
+                OriginalName = "1371_ЗверобойнаяШхуна_ЛеернаяСтойка_1951.tif"
+                Tags         = @("Зверобойная Шхуна", "Леерная Стойка")
+                Thumbnails   = @{}
+                MainCategory = "Шхуны"
+            }
+
+            New-ContentPage -Directory "cat" -FileId "cat-1" -FileData $fileData -OutputPath $testOutputPath
+
+            $content = Get-Content (Join-Path $testOutputPath "cat/cat-1.md") -Raw -Encoding utf8
+            $content | Should -Match 'razdely = \["Шхуны"\]'
+            $content | Should -Match 'tags = \['
+            ([regex]::Matches($content, '\[taxonomies\]')).Count | Should -Be 1
+            $content.IndexOf('razdely =') | Should -BeGreaterThan $content.IndexOf('[taxonomies]')
+        }
+
+        It "Writes the razdely taxonomy when there are no tags" {
+            $fileData = [PSCustomObject]@{
+                OriginalName = "ОписьЧертежей.tif"
+                Tags         = $null
+                Thumbnails   = @{}
+                MainCategory = "Верфь: цеха и здания"
+            }
+
+            New-ContentPage -Directory "cat" -FileId "cat-2" -FileData $fileData -OutputPath $testOutputPath
+
+            $content = Get-Content (Join-Path $testOutputPath "cat/cat-2.md") -Raw -Encoding utf8
+            $content | Should -Match '\[taxonomies\]'
+            $content | Should -Match 'razdely = \["Верфь: цеха и здания"\]'
+            $content | Should -Not -Match 'tags ='
+        }
+
+        It "Omits razdely when the main category is <Case>" -ForEach @(
+            @{ Case = "null"; Value = $null }
+            @{ Case = "empty"; Value = "" }
+            @{ Case = "blank"; Value = "  " }
+        ) {
+            $fileData = [PSCustomObject]@{
+                OriginalName = "test.tif"
+                Tags         = @()
+                Thumbnails   = @{}
+                MainCategory = $Value
+            }
+
+            New-ContentPage -Directory "cat" -FileId "cat-3" -FileData $fileData -OutputPath $testOutputPath
+
+            $content = Get-Content (Join-Path $testOutputPath "cat/cat-3.md") -Raw -Encoding utf8
+            $content | Should -Not -Match 'razdely'
+            $content | Should -Not -Match '\[taxonomies\]'
+        }
+
+        It "Escapes quotes in the main category" {
+            $fileData = [PSCustomObject]@{
+                OriginalName = "test.tif"
+                Tags         = @()
+                Thumbnails   = @{}
+                MainCategory = 'Шхуна "Запад"'
+            }
+
+            New-ContentPage -Directory "cat" -FileId "cat-4" -FileData $fileData -OutputPath $testOutputPath
+
+            $content = Get-Content (Join-Path $testOutputPath "cat/cat-4.md") -Raw -Encoding utf8
+            $content | Should -Match ([regex]::Escape('razdely = ["Шхуна \"Запад\""]'))
+        }
     }
 }

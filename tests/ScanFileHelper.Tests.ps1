@@ -51,6 +51,7 @@ Describe "Convert-FileAndCreateData" {
         $existingData = [PSCustomObject]@{
             OriginalName    = "оригинал.pdf"
             ResultFileName  = "original.tif"
+            MainCategory    = "Шхуны"
         }
 
         # Act
@@ -58,6 +59,7 @@ Describe "Convert-FileAndCreateData" {
 
         # Assert
         $result | Should -Be $existingData
+        $result.MainCategory | Should -Be "Шхуны"
     }
 
     It "Creates new file data for unprocessed pdf file" {
@@ -71,6 +73,8 @@ Describe "Convert-FileAndCreateData" {
         $result.OriginalName    | Should -Be "оригинал.pdf"
         $result.ResultFileName  | Should -Be "original.tif"
         $result.PngFile         | Should -Be "original.png"
+        $result.PSObject.Properties.Name | Should -Contain "MainCategory"
+        $result.MainCategory    | Should -BeNullOrEmpty
 
         Should -Invoke -ModuleName ScanFileHelper Convert-PdfToTiff -Times 1 -Exactly
         Should -Invoke -ModuleName ScanFileHelper Convert-WebPngOrRename -Times 1 -Exactly
@@ -101,6 +105,7 @@ Describe "Convert-FileAndCreateData" {
             OriginalName    = "old-оригинал3.pdf"
             ResultFileName  = "old-original3.tif"
             PngFile         = "old-original3.png"
+            MainCategory    = "Дори"
         }
         
         # Create test files
@@ -124,5 +129,6 @@ Describe "Convert-FileAndCreateData" {
         $result.ResultFileName  | Should -Be "original3.tif"
         $result.PngFile         | Should -Be "original3.png"
         $result.Thumbnails."400" | Should -Be "original3_400.png"
+        $result.MainCategory    | Should -Be "Дори"
     }
 }

@@ -70,6 +70,9 @@ function Convert-FileAndCreateData {
         Tags           = Get-TagsFromName $SourceFile.BaseName
         Year           = Get-YearFromFilename $SourceFile.BaseName
         Thumbnails     = Get-Thumbnails $OutputFileName
+        # Основной раздел чертежа заполняется отдельно (Set-MainCategory.ps1),
+        # при обработке он остаётся пустым; при переименовании файла сохраняем прежнее значение
+        MainCategory   = ($null -ne $MaybeFileData) ? $MaybeFileData.MainCategory : $null
     }
 
     
