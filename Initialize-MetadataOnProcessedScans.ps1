@@ -76,6 +76,18 @@ foreach ($SourceDir in $SourceDirectories) {
         Description  = $null
         Files        = [PSCustomObject]@{}
     }
+
+    # Основные разделы из существующего JSON, чтобы пересборка их не стёрла
+    $ExistingMainCategories = @{}
+    $ExistingJsonPath = Join-Path $FullMetadataPath "$TransliteratedDirName.json"
+    if ((Test-Path $ExistingJsonPath) -and (Test-Json -Path $ExistingJsonPath -ErrorAction SilentlyContinue)) {
+        $ExistingMetadata = Get-Content -Path $ExistingJsonPath -Raw | ConvertFrom-Json
+        if ($null -ne $ExistingMetadata.Files) {
+            $ExistingMetadata.Files.PSObject.Properties | ForEach-Object {
+                if ($_.Value.MainCategory) { $ExistingMainCategories[$_.Name] = $_.Value.MainCategory }
+            }
+        }
+    }
     
     # Get all scanned files in source directory (pdf and tif)
     $SourceFiles = Get-ChildItem -Path $SourceDir.FullName -File | Where-Object { $_.Extension -in @('.pdf', '.tif') }
@@ -164,6 +176,7 @@ foreach ($SourceDir in $SourceDirectories) {
                 Tags           = Get-TagsFromName $SourceFile.BaseName
                 Year           = Get-YearFromFilename $SourceFile.BaseName
                 Thumbnails     = $ThumbnailsData
+                MainCategory   = $ExistingMainCategories[$OriginalFileHash]
             }
             
             # Add PngFilePages array if it's a multi-page file

@@ -223,19 +223,33 @@ thumbnail = "$thumbnail"
 "@
     }
 
+    # Таксономии: теги из имени файла и основной раздел (MainCategory)
+    $taxonomyLines = @()
+
     if ($tags) {
         # Ensure $tags is always treated as an array for consistent JSON output
         $tagsArray = @($tags)
         if ($tagsArray.Count -gt 0) {
             # Force array output even for single elements by using -AsArray parameter
             $tagsJson = $tagsArray | ConvertTo-Json -Compress -AsArray
-            $frontMatter += @"
+            $taxonomyLines += "tags = $tagsJson"
+        }
+    }
+
+    $mainCategory = if ($FileData.PSObject.Properties['MainCategory']) { $FileData.MainCategory } else { $null }
+    if (-not [string]::IsNullOrWhiteSpace($mainCategory)) {
+        # ConvertTo-Json экранирует кавычки; строка JSON — допустимая строка TOML
+        $categoryJson = @($mainCategory.Trim()) | ConvertTo-Json -Compress -AsArray
+        $taxonomyLines += "razdely = $categoryJson"
+    }
+
+    if ($taxonomyLines.Count -gt 0) {
+        $frontMatter += @"
 
 [taxonomies]
-tags = $tagsJson
+$($taxonomyLines -join "`n")
 
 "@
-        }
     }
 
     $frontMatter += @"

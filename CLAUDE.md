@@ -71,6 +71,16 @@ Invoke-Pester ./tests/
 ./Initialize-MetadataOnProcessedScans.ps1 -DoneScannnedPath "path/to/original/scans" -ArchiveContentPath "path/to/processed/archive" -MetadataPath "path/to/metadata/output"
 ```
 
+### Main category (раздел)
+```powershell
+# Propose a main category for drawings that have none; writes a CSV, does not change the JSON
+./Set-MainCategory.ps1 -MetadataPath "path/to/metadata" -ReportPath ./main-category.csv
+
+# Write the reviewed CSV into the metadata JSON (fills only empty values unless -Force)
+./Set-MainCategory.ps1 -MetadataPath "path/to/metadata" -ApplyCsv ./main-category.csv
+```
+See [docs/MainCategory.md](docs/MainCategory.md).
+
 ### GitLab Integration
 ```powershell
 # Create merge request for processed results
@@ -110,6 +120,7 @@ Invoke-Pester ./tests/
 - `ConvertText.psm1` - Text processing and transliteration
 - `ToolsHelper.psm1` - System tool validation and utilities
 - `HashHelper.psm1` - MD5 hash generation for file indexing
+- `MainCategoryHelper.psm1` - Main category rules, CSV report and writing values into metadata JSON
 
 ### Configuration
 
@@ -179,7 +190,8 @@ This script initializes metadata JSON files based on files that have been alread
    - Detects single-page vs multi-page scenarios:
      - **Single-page**: Looks for `filename.png`
      - **Multi-page**: Looks for `filename-0.png`, `filename-1.png`, etc.
-   - Creates data structure with: `ResultFileName`, `OriginalName`, `PngFile`, `MultiPage`, `Tags`, `Year`, `Thumbnails`
+   - Creates data structure with: `ResultFileName`, `OriginalName`, `PngFile`, `MultiPage`, `Tags`, `Year`, `Thumbnails`, `MainCategory`
+   - Keeps `MainCategory` values from an existing JSON file for the same folder, matched by file hash
    - For multi-page files: adds `PngFilePages` array with all page filenames, sets `MultiPage: true`, uses first page as main `PngFile`
    - Uses original scan filename for tags and year extraction
    - Adds processed scan data to directory metadata using original file hash as key
